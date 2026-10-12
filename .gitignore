@@ -14,3 +14,6 @@ storyboard*.png
 
 # tool caches
 .sonar/
+
+# smoke-test screenshots (game/test/smoke.mjs)
+game/test-output/
