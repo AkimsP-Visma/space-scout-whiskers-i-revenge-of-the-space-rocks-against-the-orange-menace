@@ -1,0 +1,32 @@
+{
+  "name": "scout-ring",
+  "title": "Scout and the ringed planet",
+  "format": {
+    "width": 1920,
+    "height": 1080,
+    "fps": 24,
+    "bpm": 120,
+    "duration": 28,
+    "frames": 672
+  },
+  "formats": [
+    "16:9"
+  ],
+  "storyFormat": "F5 fixed-hero journey (beat-cut; the scout pinned 0-12.5s while the cuts speed up to a 16th rush)",
+  "style": "pixel",
+  "scenes": [
+    "src/space.js",
+    "src/scout.js",
+    "src/pilot.js",
+    "src/shots-journey.js",
+    "src/shots-planet.js"
+  ],
+  "review": {
+    "safe": {
+      "top": 60,
+      "bottom": 110,
+      "right": 60
+    },
+    "refs": {}
+  }
+}

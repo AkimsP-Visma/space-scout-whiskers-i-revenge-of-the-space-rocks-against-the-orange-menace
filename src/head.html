@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Scout and the ringed planet</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #0b0910; overflow: hidden; }
+  body { display: flex; align-items: center; justify-content: center; }
+  canvas { max-width: 100vw; max-height: 100vh; width: auto; height: auto; display: block; cursor: pointer; image-rendering: pixelated; }
+</style>
+</head>
+<body>
+<canvas id="c" width="1920" height="1080"></canvas>
+<script>
+"use strict";
+// =====================================================================
+//  SCOUT AND THE RINGED PLANET - 16:9, 28.0s @ 120 BPM, 24fps, pixel style at 320x180 (6 px per pixel).
+//  F5 fixed-hero journey: the scout holds its screen spot while the universe moves and cuts around it,
+//  the cuts speed up (2s, 2s, 1s, a beat, 8ths, a 16th rush), then the scale reveal, the silent dive
+//  through the ring gap, the burst into sunlight, and the opening framing again with the planet behind.
+//  Device: the planet starts as one odd star ahead of the ship and ends as one star behind it.
+//  Build: node <skill>/tools/build.mjs pieces/scout-ring. Preview: open index.html (click to hear; ?t=4.5 freezes a frame).
+// =====================================================================
+const FPS = 24, W = 1920, H = 1080;
+const BPM = 120, BEAT = 60 / BPM, E8 = BEAT / 2, E16 = BEAT / 4;   // 0.5 / 0.25 / 0.125s = 12 / 6 / 3 frames
+const DURATION = 28.0;
+const NFRAMES = Math.round(DURATION * FPS);
+const LOOP_T = NFRAMES / FPS;
+const SAFE = { top: 60, bottom: 110, right: 60 };
+const HAND = '"Segoe UI", "Helvetica Neue", Arial, sans-serif';   // only the storyboard sheet uses a system font
+const CX = (W - SAFE.right) / 2;
+
+// the shot list: [t0, scene]. Every boundary is a hard cut (BRIDGES = []), and every cut is a new view of the same
+// world: the journey (0-12.5) is one continuous shot, then the wide, the pilot close up, the dive, and sunlight to home.
+const SHOT_LIST = [
+  [0.0,  'journey'],    // beats 1-3: hold, wake, throttle, the belt, the moon, the comet, the approach; the scout pinned
+  [12.5, 'wide'],       // beat 4: the scale
+  [14.5, 'pilot'],      // the extreme close-up
+  [16.0, 'dive'],       // beat 5: into the gap, the engine off, the quiet
+  [19.0, 'sunlight'],   // beats 6-7: the payoff, then the pull-away into the opening framing
+];
+const SCENE = { journey: () => sceneJourney(), wide: () => sceneWide(), pilot: () => scenePilot(), dive: () => sceneDive(), sunlight: () => sceneSunlight() };
+const ERA_LIST = SHOT_LIST.map(([t0, sc], i) => [t0, i + 1 < SHOT_LIST.length ? SHOT_LIST[i + 1][0] : DURATION, SCENE[sc]]);
+const SHOTS = SHOT_LIST.map(([t0, sc], i) => [sc, i, t0, ERA_LIST[i][1], sc]);
+const TIMELINE = {
+  width: W, height: H, fps: FPS, bpm: BPM, duration: DURATION, frames: NFRAMES, loop: LOOP_T, safe: SAFE, aspect: '16:9',
+  format: 'beat-cut',
+  shots: SHOTS.map(([key, era, t0, t1, title], i) => ({ id: i + 1, key, era, t0, t1, title })),
+  cuts: SHOT_LIST.slice(1).map(([t0]) => t0),
+  morphs: [],
+  anchor: { t0: 0, t1: 12.5, x: 684, y: 558, tolerance: 40 },   // the pilot's screen spot while the world moves
+  cues: { wake: 1.5, throttle: 2.0, dodge: 7.0, gulp: 15.0, hush: 17.0, burst: 19.0, cheer: 19.75, roll: 21.0, look: 25.0, wave: 25.5, log: 26.0 },
+  // the approach (11-12.5) is the busiest stretch, but as one continuous shot it has no cuts, so it carries no 'peak'
+  // role: the review's peak rules measure busy by cut rate
+  acts: [
+    { name: '1 Hold',     role: '',        t0: 0.0,  t1: 2.0 },
+    { name: '2 Travel',   role: 'build',   t0: 2.0,  t1: 6.0 },
+    { name: '3 Journey',  role: 'journey', t0: 6.0,  t1: 11.0 },
+    { name: '4 Approach', role: '',        t0: 11.0, t1: 12.5 },
+    { name: '5 Scale',    role: '',        t0: 12.5, t1: 17.0 },
+    { name: '6 Dive',     role: 'silence', t0: 17.0, t1: 19.0 },
+    { name: '7 Sunlight', role: 'gift',    t0: 19.0, t1: 24.0 },
+    { name: '8 Home',     role: 'goodbye', t0: 24.0, t1: 28.0 },
+  ],
+  board: [
+    { t: 1.0,   title: '1 hold: asleep, the odd star', sound: 'a low pad, the engine idling', next: 'the pilot wakes' },
+    { t: 1.75,  title: '1 wake: !', sound: 'a blip', next: 'throttle' },
+    { t: 4.5,   title: '2 travel: the star swells', sound: 'the engine roars; arp + bass in', next: 'the belt drifts in' },
+    { t: 7.0,   title: '3 the belt: the hop', sound: 'groove; rock thuds', next: 'the moon slides in' },
+    { t: 9.0,   title: '3 the moon below', sound: 'groove; a low bell', next: 'the comet' },
+    { t: 10.5,  title: '3 the comet above', sound: 'groove; a whoosh', next: 'the approach' },
+    { t: 12.25, title: '3 the approach: racing in', sound: 'the engine strains; 16th hits', next: 'slam: the wide' },
+    { t: 13.75, title: '4 the scale: a speck', sound: 'groove out; a deep note', next: 'close on the pilot' },
+    { t: 15.25, title: '4 the pilot sees it', sound: 'the pad holds; a gulp', next: 'into the gap' },
+    { t: 16.4,  title: '5 the plunge into the gap', sound: 'a rush of ice', next: 'engine off' },
+    { t: 18.5,  title: '5 the glide: silence', sound: 'silence 17.0-19.0', next: 'slam: sunlight' },
+    { t: 19.5,  title: '6 sunlight', sound: 'THE LOUDEST HIT; the engine back', next: 'the cheer' },
+    { t: 21.5,  title: '6 the barrel roll', sound: 'a warm chord; a swoosh', next: 'the pull-away' },
+    { t: 23.6,  title: '7 the pull-away', sound: 'the chord fades', next: 'home' },
+    { t: 26.4,  title: '7 home: the star behind', sound: 'the opening pad; the arp fades', next: 'loops' },
+  ],
+  narration: [],
+};
+window.TIMELINE = TIMELINE;

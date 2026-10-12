@@ -1,0 +1,16 @@
+# build output: tools/build.mjs assembles index.html from src/ and the skill's kit
+index.html
+
+# export and review output (tools/export.mjs, tools/review.mjs): frames, video, audio, contact sheets
+frames/
+frames-*/
+renders/
+review/
+review-*/
+
+# stills and sheets rendered by tools/still.mjs and tools/storyboard.mjs
+look*.png
+storyboard*.png
+
+# tool caches
+.sonar/
