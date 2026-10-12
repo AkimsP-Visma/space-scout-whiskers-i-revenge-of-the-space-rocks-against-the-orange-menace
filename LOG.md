@@ -38,3 +38,12 @@
 - Sound: an engine (saw hum + noise roar) follows the throttle through the piece; rock thuds driven by the same BELT data as the picture; effects about +10 dB; the comet and roll whooshes raised again after measuring.
 - Review: cuts 4/4 on the grid; story arc 3/3 (no peak role: the busiest stretch has no cuts); anchor 300/300 (max 36 px of 40); text PASS; dead beats PASS; loudest window 19.0s (-8.1 dBFS) with 2.0s at <= -40 dBFS before it; -14.8 LUFS, true peak -1.0 dBFS; sfx stem mean -25.1 dB vs music -18.5 dB, effects peaking within about 1-8 dB of the music.
 - Weakest moment now: the home wave (a 3x3 paw on a 9-pixel pilot) still does not read; around 24.0-24.5 the receding planet's ring passes just behind the scout's tail.
+
+## 2026-10-12 - the scout-run game
+- A separate page, game/index.html, plays the film and flows from its last frame into an endless belt dodger and
+  shooter built from the film's own art (design and plan in docs/superpowers/).
+- The art is reused, not copied: game/build.mjs joins the piece's src/ files with a vendored copy of the animate kit
+  and the game's files. The film page and its export are untouched (same sha256 after a rebuild).
+- Measured before building: the film's nebula costs 14 ms a frame and its CRT pass 3.7 ms, so the game caches both
+  (a column-by-column nebula, a pre-drawn post overlay); the seam check confirms the game's first frame matches the
+  film's last.
