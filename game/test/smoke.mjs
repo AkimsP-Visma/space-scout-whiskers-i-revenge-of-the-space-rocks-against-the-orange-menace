@@ -38,11 +38,37 @@ async function open(browser, query) {
   return { page, errors, state, until, shot };
 }
 
+// the seam: the game's first frame against the film's last, outside the HUD rows and the log line; then the draw
+// time of a busy frame (ten seconds into a run, steering and firing)
+async function seamAndDrawTime(p) {
+  const r = await p.page.evaluate(() => {
+    const film = document.createElement('canvas'), game = document.createElement('canvas');
+    film.width = game.width = W; film.height = game.height = H;
+    renderFrame(FILM_END, film);
+    const run = Play.create(1, SEAM_START);
+    Draw.frame(game, run);
+    const thumb = (c) => { const s = document.createElement('canvas'); s.width = 160; s.height = 90; const g = s.getContext('2d'); g.drawImage(c, 0, 0, 160, 90); return g.getImageData(0, 0, 160, 90).data; };
+    const a = thumb(film), b = thumb(game);
+    let sum = 0, n = 0;
+    for (let y = 18; y < 90; y++) {
+      if (y >= 70 && y < 86) continue;
+      for (let x = 0; x < 160; x++) for (let c = 0; c < 3; c++) { const i = (y * 160 + x) * 4 + c; sum += Math.abs(a[i] - b[i]); n++; }
+    }
+    for (let k = 0; k < 600; k++) Play.step(run, { x: 0, y: k % 120 < 60 ? -1 : 1, fire: true }, CFG.step);
+    const t0 = performance.now();
+    for (let k = 0; k < 30; k++) Draw.frame(game, run);
+    return { diff: sum / n, ms: (performance.now() - t0) / 30, things: run.objects.length + run.bolts.length + run.debris.length };
+  });
+  check(r.diff < 2, `the seam: the game's first frame matches the film's last (mean difference ${r.diff.toFixed(2)} of 255 outside the HUD)`);
+  check(r.ms < 16.7, `a play frame with ${r.things} things in it draws in ${r.ms.toFixed(1)}ms (budget 16.7ms)`);
+}
+
 // the walk through the page
 async function walk(browser) {
   const p = await open(browser, '?test');
-  check((await p.state()).name === 'title', 'the page opens on the title');
-  await p.shot('1-title');
+  check((await p.state()).name === 'seam', 'the page draws the first frame of a run');
+  await p.shot('3-seam');
+  await seamAndDrawTime(p);
 }
 
 const built = spawnSync(process.execPath, [path.join(GAME, 'build.mjs')], { stdio: 'inherit' });

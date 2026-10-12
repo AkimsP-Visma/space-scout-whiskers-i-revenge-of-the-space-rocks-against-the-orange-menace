@@ -1,5 +1,5 @@
 // =====================================================================
-//  FLOW - draws the film's first frame: the film's code and the game's are joined in one page
+//  FLOW - draws the first frame of a run (the seam): the play drawing works on the film's art
 // =====================================================================
-renderFrame(0, document.getElementById('c'));
-if (new URLSearchParams(location.search).has('test')) window.GAME = { state: () => ({ name: 'title' }) };
+Draw.frame(document.getElementById('c'), Play.create(1, SEAM_START));
+if (new URLSearchParams(location.search).has('test')) window.GAME = { state: () => ({ name: 'seam' }) };
