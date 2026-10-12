@@ -80,16 +80,74 @@ async function soundRenders(p) {
   check(silent.length === 0, `no clip is silent${silent.length ? '; silent: ' + silent.join(', ') : ''}`);
 }
 
-// the walk through the page
+// the walk through the page: a key while loading, the title, the film, a skip, the seam, steering and firing, pause,
+// game over and a retry; then the same page without sound
 async function walk(browser) {
   const p = await open(browser, '?test');
-  check((await p.state()).name === 'seam', 'the page draws the first frame of a run');
-  await p.shot('3-seam');
+  let s = await p.state();
+  if (!s.ready && !s.soundFailed) {
+    await p.page.keyboard.press('KeyX');
+    await p.page.waitForTimeout(100);
+    check((await p.state()).name === 'title', 'a key during LOADING is ignored');
+  }
   await seamAndDrawTime(p);
   await soundRenders(p);
+  s = await p.until((x) => x.ready || x.soundFailed, 30000, 'the sounds to render');
+  check(s.name === 'title' && s.ready, `the title waits with the sounds ready (failed stage: ${s.soundFailed})`);
+  await p.shot('1-title');
+  await p.page.keyboard.press('KeyX');
+  await p.until((x) => x.name === 'film', 2000, 'the film to start');
+  await p.page.waitForTimeout(1500);
+  s = await p.state();
+  check(s.filmTime > 1, `the film plays on the audio clock (at ${s.filmTime.toFixed(2)}s)`);
+  await p.shot('2-film');
+  await p.page.keyboard.press('Enter');
+  s = await p.until((x) => x.name === 'play', 2000, 'the seam after a skip');
+  check(s.shields === 3 && s.t < 0.5, 'Enter skips the film into a new run with 3 shields');
+  await p.page.waitForTimeout(200);
+  await p.shot('3-seam');
+  const y0 = (await p.state()).y;
+  await p.page.keyboard.down('Space'); await p.page.keyboard.down('ArrowUp');
+  await p.page.waitForTimeout(1200);
+  await p.page.keyboard.up('ArrowUp');
+  const yUp = (await p.state()).y;
+  await p.page.keyboard.down('ArrowDown');
+  await p.page.waitForTimeout(1200);
+  await p.page.keyboard.up('ArrowDown'); await p.page.keyboard.up('Space');
+  s = await p.state();
+  check(yUp < y0 && s.y > yUp && s.fired > 0, `steering and firing work (y ${y0.toFixed(0)}, up to ${yUp.toFixed(0)}, down to ${s.y.toFixed(0)}; ${s.fired} bolts)`);
+  await p.until((x) => x.objects > 0, 6000, 'the first objects');
+  await p.page.keyboard.down('Space');   // objects spawn beyond the right edge: give the first one time to drift in, with bolts flying
+  await p.page.waitForTimeout(1200);
+  await p.shot('4-play');
+  await p.page.keyboard.up('Space');
+  await p.page.keyboard.press('KeyP');
+  const paused = await p.until((x) => x.paused, 1000, 'the pause');
+  await p.page.waitForTimeout(400);
+  check((await p.state()).t === paused.t, 'P pauses the run');
+  await p.page.keyboard.press('KeyP');
+  await p.until((x) => !x.paused, 1000, 'the run to go on');
+  for (let k = 0; k < 3; k++) await p.page.evaluate(() => window.GAME.hit());
+  s = await p.until((x) => x.name === 'over', 3000, 'the game-over card');
+  await p.page.waitForTimeout(300);
+  await p.shot('5-game-over');
+  check(s.score > 0 && s.best >= s.score, `the card shows the score ${s.score} and the best ${s.best}`);
+  await p.page.keyboard.press('Space');
+  s = await p.until((x) => x.name === 'play', 2000, 'a new run');
+  check(s.shields === 3 && s.t < 0.5, 'Space on the card starts a new run');
+  await p.page.waitForTimeout(1500);
+  const ms = (await p.state()).frameMs;
+  check(ms.median < 16.7, `play frames draw in ${ms.median.toFixed(1)}ms median, ${ms.worst.toFixed(1)}ms worst, over ${ms.samples} frames (budget 16.7ms)`);
   const q = await open(browser, '?test&nosound');
-  const silent = await q.page.evaluate(async () => { await Sound.prepare(); Sound.start(); return { failed: Sound.failed, context: !!Sound.ac, film: Sound.playFilm() }; });
-  check(silent.failed === 'prepare' && !silent.context && silent.film === null, '?nosound: nothing is rendered or started, and the film gets no audio clock');
+  await q.until((x) => x.soundFailed, 5000, 'the silent start');
+  await q.page.keyboard.press('KeyX');
+  await q.until((x) => x.name === 'film', 2000, 'the silent film');
+  await q.page.waitForTimeout(600);
+  const silentFilm = await q.state();
+  check(silentFilm.filmTime > 0.3, `?nosound: the film runs on the wall clock (at ${silentFilm.filmTime.toFixed(2)}s)`);
+  await q.page.keyboard.press('Escape');
+  const silentPlay = await q.until((x) => x.name === 'play', 2000, 'play without sound');
+  check(silentPlay.shields === 3, '?nosound: Esc skips into play');
 }
 
 const built = spawnSync(process.execPath, [path.join(GAME, 'build.mjs')], { stdio: 'inherit' });
