@@ -63,12 +63,33 @@ async function seamAndDrawTime(p) {
   check(r.ms < 16.7, `a play frame with ${r.things} things in it draws in ${r.ms.toFixed(1)}ms (budget 16.7ms)`);
 }
 
+// the sounds render offline before any key: the film score, the music loop and every effect, none of them silent
+const CLIPS = ['film', 'music', 'fire', 'rockHit', 'rockBreak', 'iceClank', 'cometWarn', 'cometWhoosh', 'shieldHit', 'gameOver', 'retry'];
+async function soundRenders(p) {
+  const r = await p.page.evaluate(async () => {
+    await Sound.prepare();
+    const peak = (b) => { let m = 0; for (let c = 0; c < b.numberOfChannels; c++) for (const v of b.getChannelData(c)) m = Math.max(m, Math.abs(v)); return m; };
+    return { ready: Sound.ready, failed: Sound.failed, clips: Object.fromEntries(Object.entries(Sound.clips).map(([k, b]) => [k, { seconds: b.duration, peak: peak(b) }])) };
+  });
+  check(r.ready, `the sounds render before any key press (failed stage: ${r.failed})`);
+  const missing = CLIPS.filter((k) => !r.clips[k]);
+  check(missing.length === 0, `every clip is there${missing.length ? '; missing: ' + missing.join(', ') : ''}`);
+  const film = r.clips.film?.seconds ?? 0, music = r.clips.music?.seconds ?? 0;
+  check(Math.abs(film - 28) < 0.01 && Math.abs(music - 16) < 0.01, `the film score is 28s and the music loop 16s (${film.toFixed(2)}s, ${music.toFixed(2)}s)`);
+  const silent = CLIPS.filter((k) => r.clips[k] && !(r.clips[k].peak > 0.01));
+  check(silent.length === 0, `no clip is silent${silent.length ? '; silent: ' + silent.join(', ') : ''}`);
+}
+
 // the walk through the page
 async function walk(browser) {
   const p = await open(browser, '?test');
   check((await p.state()).name === 'seam', 'the page draws the first frame of a run');
   await p.shot('3-seam');
   await seamAndDrawTime(p);
+  await soundRenders(p);
+  const q = await open(browser, '?test&nosound');
+  const silent = await q.page.evaluate(async () => { await Sound.prepare(); Sound.start(); return { failed: Sound.failed, context: !!Sound.ac, film: Sound.playFilm() }; });
+  check(silent.failed === 'prepare' && !silent.context && silent.film === null, '?nosound: nothing is rendered or started, and the film gets no audio clock');
 }
 
 const built = spawnSync(process.execPath, [path.join(GAME, 'build.mjs')], { stdio: 'inherit' });
