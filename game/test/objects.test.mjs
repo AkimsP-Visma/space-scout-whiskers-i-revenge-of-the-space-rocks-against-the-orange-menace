@@ -45,3 +45,10 @@ test('a spawned rock enters beyond the right edge at the scroll speed', () => {
   const r = O.fromSpawn({ kind: 'rock', size: 'small', y: 60, r: 3, speed: 1, vy: 0, spin: 0 }, 150, 7);
   assert.equal(r.x, CFG.spawn.x + 3); assert.equal(r.vx, -150); assert.equal(r.hp, 1); assert.equal(r.key, 'o7');
 });
+test('a comet stays until its whole tail has left the screen', () => {
+  const c = O.fromSpawn({ kind: 'comet', y: 80, slope: 0 }, 150, 2);
+  c.warn = 0; c.x = -60;
+  assert.equal(O.isGone(c), false);
+  c.x = CFG.goneX - CFG.comet.tail - 1;
+  assert.equal(O.isGone(c), true);
+});

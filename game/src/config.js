@@ -23,6 +23,8 @@ const CFG = {
   difficulty: { ramp: 120, scroll: [150, 300], interval: [1.2, 0.45], iceFrom: 15, cometFrom: 30, ice: 0.3, comet: 0.1 },
   score: { pxPerPoint: 10, digits: 6, storageKey: 'scout-ring:best' },
   moon: { every: 60, r: 40, top: 170, depth: 0.6, enterX: 360 },
-  gameOver: { scoutDebris: 24, burstLife: 0.8, card: 1.0 },
+  gameOver: { scoutDebris: 24, burstLife: 0.8, card: 1.0, retryLockout: 0.6 },   // a fire tap right as the card shows does not skip it
+  audioGrace: 0.5,         // how long the film waits for a suspended audio clock before running silently on the wall clock
   mood: { happy: 0.4, wow: 0.6 },
+  engine: { cruise: 0.6, steer: 0.15 },   // the engine's drive at cruise pace, and how much steering adds
 };

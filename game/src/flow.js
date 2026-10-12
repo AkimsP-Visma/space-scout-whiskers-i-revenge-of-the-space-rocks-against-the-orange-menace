@@ -23,9 +23,20 @@ const Flow = {
     Hud.overlay(CANVAS, () => Hud.title(Flow.secondsIn(now), Sound.failed ? 'silent' : Sound.ready ? 'ready' : 'loading'));
   },
   startFilm(now) { Sound.start(); Flow.filmAt = Sound.playFilm(); Flow.filmFrame = null; Flow.go('film', now); },
-  filmTime(now) { return Flow.filmAt != null ? Sound.now() - Flow.filmAt : Flow.secondsIn(now); },
+  // the film's clock: the audio's while it runs, the wall clock without sound (a context still starting reads as 0)
+  filmTime(now) { return Flow.filmAt == null ? Flow.secondsIn(now) : Sound.running() ? Sound.now() - Flow.filmAt : 0; },
+  // a context the browser keeps suspended gets a short grace; then the film restarts silently on the wall clock
+  // instead of waiting on frame 0 for sound that never comes
+  fallBackIfSilent(now) {
+    if (Flow.filmAt == null || Sound.running() || Flow.secondsIn(now) < CFG.audioGrace) return;
+    Sound.stopFilm();
+    Sound.fail('start', new Error('the browser kept the audio suspended'));
+    Flow.filmAt = null;
+    Flow.go('film', now);
+  },
   // ---- film: its frames on the audio clock (the wall clock without sound), redrawn only when the frame changes
   film(now) {
+    Flow.fallBackIfSilent(now);
     const t = Flow.filmTime(now);
     if (t >= LOOP_T) { Flow.startRun(now, Flow.filmAt != null ? Flow.filmAt + LOOP_T : null); Flow.play(now); return; }
     const f = Math.max(0, Math.floor(t * FPS));
@@ -57,7 +68,7 @@ const Flow = {
         if (e === 'gameOver') Sound.engineOff();
       }
     }
-    if (!Flow.run.over) Sound.engineSet(Play.throttleAt(Flow.run.t));
+    if (!Flow.run.over) Sound.engineSet(Play.engineAt(Flow.run));
   },
   // ---- over: the card over the film's pilot close-up, redrawn only when the close-up's clock steps
   endRun(now) { Flow.best = Math.max(Flow.best, Flow.run.score); BestScore.save(Flow.best); Flow.cardB = null; Flow.go('over', now); },
@@ -82,7 +93,7 @@ const Flow = {
       if (Flow.name === 'title') { if (Sound.ready || Sound.failed) Flow.startFilm(now); continue; }
       if (Flow.name === 'film' && Input.is(code, 'skip')) { Flow.startRun(now); continue; }
       if (Flow.name === 'play' && Input.is(code, 'pause')) { Flow.paused = !Flow.paused; Flow.last = now; Sound.pause(Flow.paused); continue; }
-      if (Flow.name === 'over' && Input.is(code, 'fire')) { Sound.sfx('retry'); Flow.startRun(now); }
+      if (Flow.name === 'over' && Input.is(code, 'fire') && Flow.secondsIn(now) >= CFG.gameOver.retryLockout) { Sound.sfx('retry'); Flow.startRun(now); }
     }
   },
   frame(now) {
@@ -102,6 +113,7 @@ const Flow = {
 };
 
 Input.attach(window);
+window.addEventListener('keydown', Sound.unlock);   // some browsers only start audio inside the key event itself
 Flow.best = BestScore.load();
 Sound.prepare();
 if (IS_TEST) window.GAME = {

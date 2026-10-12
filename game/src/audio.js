@@ -9,7 +9,8 @@ const SR = 48000;
 const MUSIC_LEN = 8 * 4 * BEAT;                                       // 8 bars at 120 BPM: 16s
 const BUS_GAIN = { film: 1, music: 0.8, sfx: 1, engine: 1 };          // the effects sit a little above the music
 const ENGINE_IDLE = { level: 0.012, pitch: 55, bright: 320 }, ENGINE_FULL = { level: 0.05, pitch: 86, bright: 1600 };   // the film's engine keys
-const ENGINE_GLIDE = 0.05, ENGINE_FADE = 0.08;                         // s: how fast the engine follows the throttle, and stops
+const ENGINE_GLIDE = 0.05, ENGINE_FADE = 0.08;                         // s: how fast the engine follows its drive, and stops
+const ENGINE_STEP = 0.01;                                             // drive changes smaller than this are not rescheduled
 const LIMITER = { threshold: -3, ratio: 20, attack: 0.003, release: 0.1 };
 // the film's journey groove (src/score.js keeps it inside buildScore, so it is repeated here): one chord per bar
 const GROOVE = {
@@ -95,7 +96,7 @@ const SFX = {
 
 const Sound = {
   ready: false, failed: null, preparing: null, gain: 1, clips: {}, ac: null, master: null, buses: {},
-  filmSource: null, musicSource: null, engine: null, muted: false,
+  filmSource: null, musicSource: null, engine: null, engineDrive: null, muted: false,
   prepare() { if (!Sound.preparing) Sound.preparing = Sound.render(); return Sound.preparing; },
   async render() {
     if (new URLSearchParams(location.search).has('nosound')) { Sound.fail('prepare', new Error('started with ?nosound')); return; }
@@ -126,6 +127,12 @@ const Sound = {
     } catch (e) { Sound.fail('start', e); }
   },
   now() { return Sound.ac ? Sound.ac.currentTime : null; },
+  running() { return !!Sound.ac && Sound.ac.state === 'running'; },
+  // from inside a key event: create the context once the sounds are ready, and wake it if the browser suspended it
+  unlock() {
+    if (Sound.ready && !Sound.ac) Sound.start();
+    if (Sound.ac && !Sound.running()) Sound.ac.resume().catch((e) => console.warn('[sound] the browser would not resume the audio:', e));
+  },
   play(name, bus, o = {}) {
     if (!Sound.ac || !Sound.clips[name]) return null;
     const src = Sound.ac.createBufferSource();
@@ -156,11 +163,12 @@ const Sound = {
     hum.start(); roar.start();
     Sound.engine = { hum, lp, gHum, bp, gRoar };
   },
-  // throttle 0 (idle) to 1 (full), between the film's idle and full keys
-  engineSet(throttle) {
-    const E = Sound.engine;
-    if (!E) return;
-    const t = Sound.ac.currentTime, k = clamp(throttle), at = (key) => lerp(ENGINE_IDLE[key], ENGINE_FULL[key], k);
+  // drive 0 (idle) to 1 (full), between the film's idle and full keys; rescheduled only when the drive moves
+  engineSet(drive) {
+    const E = Sound.engine, k = clamp(drive);
+    if (!E || (Sound.engineDrive != null && Math.abs(k - Sound.engineDrive) < ENGINE_STEP)) return;
+    Sound.engineDrive = k;
+    const t = Sound.ac.currentTime, at = (key) => lerp(ENGINE_IDLE[key], ENGINE_FULL[key], k);
     E.gHum.gain.setTargetAtTime(at('level'), t, ENGINE_GLIDE); E.gRoar.gain.setTargetAtTime(at('level') * 0.8, t, ENGINE_GLIDE);
     E.hum.frequency.setTargetAtTime(at('pitch'), t, ENGINE_GLIDE);
     E.lp.frequency.setTargetAtTime(at('bright'), t, ENGINE_GLIDE); E.bp.frequency.setTargetAtTime(at('bright') * 0.6, t, ENGINE_GLIDE);
@@ -168,6 +176,7 @@ const Sound = {
   engineOff() {
     const E = Sound.engine;
     if (!E) return;
+    Sound.engineDrive = null;
     const t = Sound.ac.currentTime;
     E.gHum.gain.setTargetAtTime(0, t, ENGINE_FADE); E.gRoar.gain.setTargetAtTime(0, t, ENGINE_FADE);
   },

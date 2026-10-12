@@ -13,9 +13,10 @@ const GAME = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..'), O
 const results = [], PAGES = [];
 const check = (ok, text) => { results.push(ok); console.log(`${ok ? 'PASS' : 'FAIL'}  ${text}`); };
 
-// opens the page with a query, collecting its uncaught exceptions and console errors
-async function open(browser, query) {
+// opens the page with a query (and a script to run before the page's own), collecting its uncaught exceptions and console errors
+async function open(browser, query, init = null) {
   const page = await browser.newPage({ viewport: { width: 1280, height: 720 } }), errors = [];
+  if (init) await page.addInitScript(init);
   page.on('pageerror', (e) => errors.push(e.message));
   page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
   PAGES.push({ query, errors });
@@ -80,6 +81,12 @@ async function soundRenders(p) {
   check(silent.length === 0, `no clip is silent${silent.length ? '; silent: ' + silent.join(', ') : ''}`);
 }
 
+// a browser that keeps audio suspended (WebKit without a gesture, strict autoplay settings): its clock never moves
+const BLOCKED_AUDIO = () => {
+  const Real = window.AudioContext;
+  window.AudioContext = class extends Real { get state() { return 'suspended'; } get currentTime() { return 0; } resume() { return Promise.resolve(); } };
+};
+
 // the walk through the page: a key while loading, the title, the film, a skip, the seam, steering and firing, pause,
 // game over and a retry; then the same page without sound
 async function walk(browser) {
@@ -129,7 +136,10 @@ async function walk(browser) {
   await p.until((x) => !x.paused, 1000, 'the run to go on');
   for (let k = 0; k < 3; k++) await p.page.evaluate(() => window.GAME.hit());
   s = await p.until((x) => x.name === 'over', 3000, 'the game-over card');
-  await p.page.waitForTimeout(300);
+  await p.page.keyboard.press('Space');
+  await p.page.waitForTimeout(100);
+  check((await p.state()).name === 'over', 'a Space tap right as the card appears does not skip it');
+  await p.page.waitForTimeout(600);
   await p.shot('5-game-over');
   check(s.score > 0 && s.best >= s.score, `the card shows the score ${s.score} and the best ${s.best}`);
   await p.page.keyboard.press('Space');
@@ -148,6 +158,13 @@ async function walk(browser) {
   await q.page.keyboard.press('Escape');
   const silentPlay = await q.until((x) => x.name === 'play', 2000, 'play without sound');
   check(silentPlay.shields === 3, '?nosound: Esc skips into play');
+  const blocked = await open(browser, '?test', BLOCKED_AUDIO);
+  await blocked.until((x) => x.ready, 30000, 'the sounds to render');
+  await blocked.page.keyboard.press('KeyX');
+  await blocked.until((x) => x.name === 'film', 2000, 'the film with blocked audio');
+  await blocked.page.waitForTimeout(1500);
+  const b = await blocked.state();
+  check(b.filmTime > 0.5 && b.soundFailed === 'start', `blocked audio: the film runs silently on the wall clock (at ${b.filmTime.toFixed(2)}s, failed stage: ${b.soundFailed})`);
 }
 
 const built = spawnSync(process.execPath, [path.join(GAME, 'build.mjs')], { stdio: 'inherit' });

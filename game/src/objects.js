@@ -32,7 +32,7 @@ const Objects = {
   isGone(o) {
     if (o.kind === 'debris') return o.life <= 0;
     if (o.kind === 'bolt') return o.x > CFG.bolt.goneX;
-    return o.x < CFG.goneX - o.r;
+    return o.x < CFG.goneX - (o.kind === 'comet' ? CFG.comet.tail : o.r);   // a comet waits for its whole tail to leave
   },
   // a bolt hits rock o: { destroyed, points, pieces }; a destroyed large rock leaves two medium rocks, the rest debris
   hitRock(o) {

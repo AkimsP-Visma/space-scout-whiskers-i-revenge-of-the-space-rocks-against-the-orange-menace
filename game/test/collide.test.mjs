@@ -15,3 +15,9 @@ test('a rock at the nose hits; the same rock above the canopy misses', () => {
   assert.equal(Collide.hitsScout(scout, { x: 118, y: 51, r: 2 }), true);
   assert.equal(Collide.hitsScout(scout, { x: 100, y: 38, r: 2 }), false);
 });
+test('a circle that jumps right across another in one step still hits it', () => {
+  const bolt = { px: 124, py: 40, x: 130, y: 40, r: 1 }, rock = { px: 130, py: 40, x: 124, y: 40, r: 3 };
+  assert.equal(Collide.circles(bolt, rock), false);
+  assert.equal(Collide.swept(bolt, rock), true);
+  assert.equal(Collide.swept({ ...bolt, py: 50, y: 50 }, rock), false);
+});

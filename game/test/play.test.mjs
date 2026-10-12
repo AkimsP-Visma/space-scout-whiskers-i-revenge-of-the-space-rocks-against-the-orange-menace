@@ -68,3 +68,20 @@ test('a long stall catches up at most 0.25s', () => {
   assert.equal(Play.catchUp(0, 5).steps, 15);
   assert.equal(Play.catchUp(0, -1).steps, 0);
 });
+test('a bolt cannot pass through a fast small rock between two steps', () => {
+  const s = quiet();
+  s.objects.push(O.rock('small', 130, 40, 3, -360, 0, 0, 'fast'));   // closing on the bolt by 12px a step, more than the 8px hit width
+  s.bolts.push(O.bolt(124, 40));
+  run(s);
+  assert.equal(s.rockPoints, 10);
+});
+test('the engine drives harder as the belt speeds up and when the scout steers', () => {
+  const s = quiet();
+  run(s, idle, 60);
+  const cruising = Play.engineAt(s);
+  s.t = 120; s.scroll = Play.scrollAt(s.t);
+  const fast = Play.engineAt(s);
+  s.player.vx = CFG.scout.speed;
+  const steering = Play.engineAt(s);
+  assert.ok(fast > cruising && steering > fast && steering <= 1, `${cruising} < ${fast} < ${steering} <= 1`);
+});

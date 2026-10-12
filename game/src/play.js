@@ -17,6 +17,12 @@ const Play = {
   rampAt(t) { return EZ.io(seg(t, 0, CFG.seam.throttleRamp)); },
   scrollAt(t) { return lerp(CFG.seam.startScroll, Spawner.difficulty(t).scroll, Play.rampAt(t)); },
   throttleAt(t) { return lerp(CFG.seam.throttleFrom, 1, Play.rampAt(t)); },
+  // how hard the engine works (0..1): the throttle, more as the belt speeds up, more again while the scout steers
+  engineAt(s) {
+    const E = CFG.engine, pace = seg(s.scroll, CFG.difficulty.scroll[0], CFG.difficulty.scroll[1]);
+    const steering = Math.min(1, Math.hypot(s.player.vx, s.player.vy) / CFG.scout.speed);
+    return clamp(Play.throttleAt(s.t) * lerp(E.cruise, 1 - E.steer, pace) + E.steer * steering);
+  },
   // how many fixed steps a frame that took gap seconds buys, with the leftover acc; a stall catches up at most maxCatchUp
   catchUp(acc, gap) {
     let a = acc + Math.min(Math.max(0, gap), CFG.maxCatchUp), steps = 0;
@@ -53,6 +59,7 @@ const Play = {
     }
   },
   move(s, dt) {
+    for (const o of [...s.objects, ...s.bolts]) { o.px = o.x; o.py = o.y; }   // where each was, for the swept bolt test
     for (const o of s.objects) {
       const waiting = o.warn > 0;
       Objects.move(o, dt);
@@ -63,7 +70,7 @@ const Play = {
   },
   boltsAgainstObjects(s) {
     for (const b of s.bolts) {
-      const o = s.objects.find((k) => !k.spent && Collide.circles(b, k));
+      const o = s.objects.find((k) => !k.spent && Collide.swept(b, k));
       if (!o) continue;
       b.spent = true;
       if (o.kind !== 'rock') {
