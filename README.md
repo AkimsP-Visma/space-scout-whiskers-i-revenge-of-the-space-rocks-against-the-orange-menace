@@ -3,6 +3,10 @@
 A 28-second pixel-art film about a cat who flies past a ringed planet, followed immediately by a game about the
 consequences.
 
+![The pilot of Scout 07, eyes wide and sweating, on first seeing the size of the planet](docs/images/pilot-close-up.png)
+
+*The pilot, on first seeing the size of the planet. Also the last thing you see before every retry.*
+
 ## What happens
 
 **The film.** Scout 07, a small white ship with one orange tabby on board, cruises through an asteroid belt, past a
@@ -42,8 +46,9 @@ Your best score is kept in your browser. It is not uploaded anywhere. Nobody els
 
 ## How it is made
 
-Everything is code. There are no image files and no audio files in this repository: every pixel is drawn on a
-320x180 grid in 16 colours, and every sound, the score included, is synthesised in the browser. The film and the
+Everything is code. Apart from the screenshot above, there are no image files and no audio files in this
+repository: every pixel is drawn on a 320x180 grid in 16 colours, and every sound, the score included, is
+synthesised in the browser. The film and the
 game share the same drawing code, which is why the first frame of the game is the last frame of the film (measured
 difference: 0.04 out of 255).
 
