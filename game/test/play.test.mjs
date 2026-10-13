@@ -75,6 +75,52 @@ test('a bolt cannot pass through a fast small rock between two steps', () => {
   run(s);
   assert.equal(s.rockPoints, 10);
 });
+test('collecting a shield pickup adds one shield up to the maximum', () => {
+  const s = quiet();
+  Play.forceHit(s);   // drop to 2 shields
+  const pu = { kind: 'pickup', role: 'shield', x: s.player.x, y: s.player.y, r: CFG.pickup.r, vx: 0, vy: 0, angle: 0, spin: 0 };
+  s.objects.push(pu);
+  run(s);
+  assert.equal(s.player.shields, 3); assert.ok(s.events.includes('pickup'));
+  // a second pickup does not exceed max shields
+  s.player.shields = CFG.scout.shields;
+  const pu2 = { ...pu, spent: false };
+  s.objects.push(pu2);
+  run(s);
+  assert.equal(s.player.shields, CFG.scout.shields);
+});
+test('collecting a spread pickup arms the spread weapon and it expires', () => {
+  const s = quiet();
+  const pu = { kind: 'pickup', role: 'spread', x: s.player.x, y: s.player.y, r: CFG.pickup.r, vx: 0, vy: 0, angle: 0, spin: 0 };
+  s.objects.push(pu);
+  run(s); assert.equal(s.player.weapon, 'spread'); assert.ok(s.events.includes('pickup'));
+  // spread fires three bolts per shot
+  const before = s.bolts.length;
+  run(s, { x: 0, y: 0, fire: true });
+  assert.equal(s.bolts.length - before, 3);
+  // weapon expires after its duration
+  s.player.weaponUntil = s.t - 0.001;
+  run(s); assert.equal(s.player.weapon, 'default');
+});
+test('a rocket bolt one-shots a large rock with no split', () => {
+  const s = quiet();
+  s.objects.push(O.rock('large', 140, 100, 9, 0, 0, 0, 'big'));
+  s.bolts.push(O.rocketBolt(120, 100));
+  run(s, idle, 5);
+  assert.equal(s.objects.length, 0);   // no split pieces; rockets skip the large-rock split
+  assert.equal(s.rockPoints, CFG.rocks.large.points);   // scored as if destroyed
+});
+test('a rocket bolt passes through ice', () => {
+  const s = quiet();
+  const ice = O.fromSpawn({ kind: 'ice', y: 100, r: 12, speed: 0, spin: 0 }, 0, 3);
+  ice.x = 150; s.objects.push(ice);
+  s.bolts.push(O.rocketBolt(130, 100));
+  let clanks = 0;
+  for (let i = 0; i < 15; i++) { run(s); clanks += s.events.filter((e) => e === 'iceClank').length; }
+  assert.equal(s.objects.length, 1);   // ice still there
+  assert.equal(clanks, 0);
+  assert.ok(s.bolts.some((b) => b.role === 'rocket' && b.x > 150));   // bolt passed through
+});
 test('the engine drives harder as the belt speeds up and when the scout steers', () => {
   const s = quiet();
   run(s, idle, 60);

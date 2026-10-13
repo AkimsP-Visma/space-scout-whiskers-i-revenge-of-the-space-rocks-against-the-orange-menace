@@ -4,7 +4,7 @@
 // =====================================================================
 const LOG_LINE = 'LOG 02: BELT AHEAD';
 // rows of the 320x180 grid (captionY is in screen px, as the film's captions are)
-const HUD_ROW = { scoreY: 10, pipsY: 26, captionY: 900, promptY: 150, pausedY: 74, cardTop: 4, cardScores: 124, cardPrompt: 169, errorY: 60 };
+const HUD_ROW = { scoreY: 10, pipsY: 26, weaponY: 36, captionY: 900, promptY: 150, pausedY: 74, cardTop: 4, cardScores: 124, cardPrompt: 169, errorY: 60 };
 const ERROR_LINE = 48;   // glyphs per line on the error card
 const Hud = {
   blinkOn(t, period = 0.5) { return Math.floor(t / period) % 2 === 0; },
@@ -24,6 +24,20 @@ const Hud = {
       pixBox(right - w, HUD_ROW.scoreY, w, 13, { bg: Q.ink, edge: Q.slate });
       pixText(txt, right - w + 3, HUD_ROW.scoreY + 3, Q.ice);
       for (let k = 0; k < CFG.scout.shields; k++) pixBox(right - 7 - k * 9, HUD_ROW.pipsY, 7, 6, { bg: k < s.player.shields ? Q.orange : Q.ink, edge: Q.slate });
+      if (s.player.weapon !== 'default') {
+        const secs = Math.max(1, Math.ceil(s.player.weaponUntil - s.t));
+        const label = (s.player.weapon === 'spread' ? 'SPR' : 'RKT') + ' ' + secs;
+        const col = s.player.weapon === 'spread' ? Q.yellow : Q.red;
+        pixText(label, right - pixTextW(label), HUD_ROW.weaponY, col);
+      }
+      if (s.boss) {
+        const B = s.boss, phase2 = B.hp <= B.maxHp * CFG.boss.phaseAt, col = phase2 ? Q.red : Q.grey;
+        const label = 'WARDEN', lw = pixTextW(label), barW = 60;
+        const totalW = lw + barW + 8, boxX = Math.round((PX_W - totalW) / 2);
+        pixBox(boxX, HUD_ROW.scoreY, totalW, 13, { bg: Q.ink, edge: col });
+        pixText(label, boxX + 3, HUD_ROW.scoreY + 3, col);
+        prect(boxX + lw + 6, HUD_ROW.scoreY + 4, Math.max(0, Math.round(barW * B.hp / B.maxHp)), 5, col);
+      }
     });
     if (s.t < CFG.seam.logHold) pixCaption(LOG_LINE, { at: 0, dur: CFG.seam.logType, y: HUD_ROW.captionY, fg: Q.white, edge: Q.orange });
   },

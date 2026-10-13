@@ -3,7 +3,7 @@
 //  rate, shields and the invulnerable blink after a hit. Never draws.
 // =====================================================================
 const Player = {
-  create(x, y) { return { x, y, vx: 0, vy: 0, shields: CFG.scout.shields, invulnerable: 0, cooldown: 0, alive: true }; },
+  create(x, y) { return { x, y, vx: 0, vy: 0, shields: CFG.scout.shields, invulnerable: 0, cooldown: 0, alive: true, weapon: 'default', weaponUntil: 0 }; },
   // the velocity eases toward the held direction at full speed, so the scout has a little weight but stops quickly
   steer(p, input, dt) {
     const S = CFG.scout, len = Math.hypot(input.x, input.y) || 1, k = Math.min(1, S.ease * dt);

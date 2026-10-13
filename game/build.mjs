@@ -10,7 +10,7 @@ import { fileURLToPath } from 'node:url';
 
 const GAME = path.dirname(fileURLToPath(import.meta.url)), PIECE = path.resolve(GAME, '..');
 // the game's own parts in dependency order: each file may use the names of the files before it
-const GAME_PARTS = ['config.js', 'collide.js', 'spawner.js', 'objects.js', 'player.js', 'play.js', 'input.js', 'best-score.js', 'audio.js', 'backdrop.js', 'hud.js', 'draw.js', 'flow.js'];
+const GAME_PARTS = ['config.js', 'collide.js', 'spawner.js', 'objects.js', 'player.js', 'boss.js', 'play.js', 'input.js', 'best-score.js', 'audio.js', 'backdrop.js', 'hud.js', 'draw.js', 'flow.js'];
 const read = (rel, root) => fs.readFileSync(path.join(root, rel), 'utf8').replace(/\s*$/, '\n');
 // the film's constants and timeline: its head.html from the <script> tag on (the shell supplies the page around it)
 function filmHeadScript() {

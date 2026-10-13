@@ -2,7 +2,8 @@
 //  PLAY - one run of the belt as plain state, advanced in fixed steps: the seam's throttle-up, spawning, movement,
 //  bolts against objects, objects against the scout, the score. Each step lists what happened in s.events, for the
 //  sounds and the pilot's face. Never draws.
-//  Events: 'fire', 'rockHit', 'rockBreak', 'iceClank', 'cometWarn', 'cometGo', 'shieldHit', 'gameOver'.
+//  Events: 'fire', 'rocketFire', 'pickup', 'rockHit', 'rockBreak', 'iceClank', 'cometWarn', 'cometGo',
+//          'shieldHit', 'gameOver', 'bossWarn', 'bossShot', 'bossHit', 'bossDeath'.
 // =====================================================================
 const Play = {
   create(seed, start) {
@@ -11,6 +12,7 @@ const Play = {
       spawnN: 0, nextSpawn: CFG.seam.firstSpawn, nextMoon: CFG.moon.every, moonFrom: null, nextId: 0,
       player: Player.create(start.x, start.y), objects: [], bolts: [], debris: [], events: [],
       over: false, overAt: null, happyUntil: -1, wowUntil: -1,
+      boss: null, nextBossScore: CFG.boss.scoreAt,
     };
   },
   // the seam eases the world and the engine from the film's slow cruise up to the belt
@@ -37,7 +39,9 @@ const Play = {
     Play.steerAndFire(s, input, dt);
     Play.spawn(s);
     Play.move(s, dt);
+    Play.moveBoss(s, dt);
     Play.boltsAgainstObjects(s);
+    Play.boltsAgainstBoss(s);
     Play.objectsAgainstScout(s);
     Play.sweep(s);
     if (!s.over) s.score = Math.floor(s.scrolled / CFG.score.pxPerPoint) + s.rockPoints;
@@ -45,11 +49,31 @@ const Play = {
   steerAndFire(s, input, dt) {
     if (s.over) return;
     Player.steer(s.player, input, dt);
+    if (s.player.weapon !== 'default' && s.t >= s.player.weaponUntil) s.player.weapon = 'default';
     const at = Player.tryFire(s.player, input.fire, dt);
     if (!at) return;
-    s.bolts.push(Objects.bolt(at.x, at.y)); s.fired++; s.events.push('fire');
+    const w = s.player.weapon;
+    if (w === 'spread') {
+      s.bolts.push(Objects.bolt(at.x, at.y));
+      s.bolts.push(Objects.bolt(at.x, at.y - 1, -CFG.spread.vy));
+      s.bolts.push(Objects.bolt(at.x, at.y + 1, CFG.spread.vy));
+      s.events.push('fire');
+    } else if (w === 'rocket') {
+      s.bolts.push(Objects.rocketBolt(at.x, at.y));
+      s.events.push('rocketFire');
+    } else {
+      s.bolts.push(Objects.bolt(at.x, at.y));
+      s.events.push('fire');
+    }
+    s.fired++;
   },
   spawn(s) {
+    if (!s.boss && s.score >= s.nextBossScore) {
+      const bossNum = s.nextBossScore / CFG.boss.scoreAt;
+      s.boss = Boss.create(CFG.boss.hp + (bossNum - 1) * CFG.boss.hpStep);
+      s.nextSpawn = Infinity; s.events.push('bossWarn'); return;
+    }
+    if (s.boss) return;
     if (s.t >= s.nextMoon) { s.moonFrom = s.scrolled; s.nextMoon += CFG.moon.every; }
     while (s.t >= s.nextSpawn) {
       const sp = Spawner.next(s.seed, s.spawnN++, s.t);
@@ -57,6 +81,29 @@ const Play = {
       if (sp.kind === 'comet') s.events.push('cometWarn');
       s.nextSpawn += Spawner.difficulty(s.t).interval;
     }
+  },
+  moveBoss(s, dt) {
+    if (!s.boss) return;
+    const bolts = Boss.step(s.boss, s.player, dt);
+    for (const b of bolts) { s.objects.push(b); s.events.push('bossShot'); }
+  },
+  boltsAgainstBoss(s) {
+    if (!s.boss) return;
+    for (const b of s.bolts) {
+      if (b.spent || !Collide.swept(b, s.boss)) continue;
+      b.spent = true; s.boss.hp--; s.events.push('bossHit');
+      if (s.boss.hp <= 0) { Play.defeatBoss(s); return; }
+    }
+  },
+  defeatBoss(s) {
+    const b = s.boss;
+    s.rockPoints += CFG.boss.points;
+    s.debris.push(...Objects.debris(b.x, b.y, CFG.boss.debrisCount, 'rock', 'boss' + s.seed));
+    s.debris.push(...Objects.debris(b.x, b.y, CFG.boss.sparkCount, 'spark', 'bossS' + s.seed));
+    s.boss = null; s.nextBossScore += CFG.boss.scoreAt;
+    s.nextSpawn = s.t + 2;
+    s.happyUntil = s.t + 1; s.wowUntil = s.t + 1;
+    s.events.push('bossDeath');
   },
   move(s, dt) {
     for (const o of [...s.objects, ...s.bolts]) { o.px = o.x; o.py = o.y; }   // where each was, for the swept bolt test
@@ -70,12 +117,20 @@ const Play = {
   },
   boltsAgainstObjects(s) {
     for (const b of s.bolts) {
-      const o = s.objects.find((k) => !k.spent && Collide.swept(b, k));
+      const o = s.objects.find((k) => !k.spent && k.kind !== 'pickup' && k.kind !== 'enemyBolt' && Collide.swept(b, k));
       if (!o) continue;
+      if (o.kind !== 'rock' && b.role === 'rocket') continue;   // rockets pass through ice and comets
       b.spent = true;
       if (o.kind !== 'rock') {
         s.debris.push(...Objects.debris(b.x, b.y, CFG.debris.sparks, 'spark', 'spark' + s.nextId++));
         s.events.push('iceClank');
+        continue;
+      }
+      if (b.role === 'rocket') {
+        o.spent = true; s.rockPoints += CFG.rocks[o.size].points;
+        s.happyUntil = s.t + CFG.mood.happy; s.wowUntil = s.t + CFG.mood.wow; s.events.push('rockBreak');
+        s.debris.push(...Objects.debris(o.x, o.y, CFG.rocket.debrisCount, 'rock', o.key));
+        s.debris.push(...Objects.debris(b.x, b.y, CFG.rocket.sparkCount, 'spark', 'rkt' + s.nextId++));
         continue;
       }
       const out = Objects.hitRock(o);
@@ -87,11 +142,24 @@ const Play = {
   objectsAgainstScout(s) {
     if (s.over) return;
     for (const o of s.objects) {
-      if (o.spent || !Collide.hitsScout(s.player, o) || !Player.hit(s.player)) continue;
+      if (o.spent) continue;
+      if (o.kind === 'pickup' && Collide.hitsScout(s.player, o)) { o.spent = true; Play.collectPickup(s, o.role); continue; }
+      if (!Collide.hitsScout(s.player, o) || !Player.hit(s.player)) continue;
       s.wowUntil = s.t + CFG.mood.wow; s.events.push('shieldHit');
       if (o.kind === 'rock') { o.spent = true; s.debris.push(...Objects.debris(o.x, o.y, CFG.debris.count[0], 'rock', o.key)); }
+      if (o.kind === 'enemyBolt') o.spent = true;
       if (!s.player.alive) { Play.endRun(s); return; }
     }
+  },
+  collectPickup(s, role) {
+    if (role === 'shield') {
+      s.player.shields = Math.min(CFG.scout.shields, s.player.shields + 1);
+    } else {
+      s.player.weapon = role;
+      s.player.weaponUntil = s.t + CFG.pickup.duration;
+    }
+    s.happyUntil = s.t + CFG.mood.happy;
+    s.events.push('pickup');
   },
   endRun(s) {
     s.over = true; s.overAt = s.t; s.events.push('gameOver');
