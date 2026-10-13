@@ -100,7 +100,7 @@ const Flow = {
         }
       }
       if (Flow.name === 'play' && Input.is(code, 'pause')) { Flow.paused = !Flow.paused; Flow.last = now; Sound.pause(Flow.paused); continue; }
-      if (Flow.name === 'over' && Input.is(code, 'fire') && Flow.secondsIn(now) >= CFG.gameOver.retryLockout) { Sound.sfx('retry'); Flow.startRun(now); }
+      if (Flow.name === 'over' && (Input.is(code, 'fire') || Input.is(code, 'skip')) && Flow.secondsIn(now) >= CFG.gameOver.retryLockout) { Sound.sfx('retry'); Flow.startRun(now); }
     }
   },
   frame(now) {

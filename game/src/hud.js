@@ -50,7 +50,7 @@ const Hud = {
     const pad = (n) => String(n).padStart(CFG.score.digits, '0');
     Hud.box(['GAME OVER'], HUD_ROW.cardTop, { edge: Q.red });
     Hud.box(['SCORE ' + pad(score), 'BEST  ' + pad(best)], HUD_ROW.cardScores);
-    if (Hud.blinkOn(t)) pixText('SPACE TO RETRY', PX_W / 2, HUD_ROW.cardPrompt, Q.white, { align: 'center', shadow: Q.ink });
+    if (Hud.blinkOn(t)) pixText('FIRE OR ENTER TO RESTART', PX_W / 2, HUD_ROW.cardPrompt, Q.white, { align: 'center', shadow: Q.ink });
   },
   error(message) {
     const text = String(message).toUpperCase().slice(0, 2 * ERROR_LINE);
