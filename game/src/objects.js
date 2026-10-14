@@ -10,10 +10,12 @@ const Objects = {
     const key = 'o' + id;
     if (sp.kind === 'comet') return { kind: 'comet', key, x: CFG.spawn.x, y: sp.y, r: CFG.comet.headR, vx: -CFG.comet.speed, vy: CFG.comet.speed * sp.slope, angle: 0, spin: 0, warn: CFG.comet.warn };
     if (sp.kind === 'ice') return { kind: 'ice', key, x: CFG.spawn.x + sp.r, y: sp.y, r: sp.r, vx: -scroll * sp.speed, vy: 0, angle: 0, spin: sp.spin };
+    if (sp.kind === 'pickup') return { kind: 'pickup', role: sp.role, key, x: CFG.spawn.x, y: sp.y, r: CFG.pickup.r, vx: -scroll * sp.speed, vy: 0, angle: 0, spin: CFG.pickup.spinRate };
     return Objects.rock(sp.size, CFG.spawn.x + sp.r, sp.y, sp.r, -scroll * sp.speed, sp.vy, sp.spin, key);
   },
   rock(size, x, y, r, vx, vy, spin, key) { return { kind: 'rock', size, key, x, y, r, vx, vy, angle: 0, spin, hp: CFG.rocks[size].hp }; },
-  bolt(x, y) { return { kind: 'bolt', x, y, r: CFG.bolt.r, vx: CFG.bolt.speed, vy: 0 }; },
+  bolt(x, y, vy = 0) { return { kind: 'bolt', x, y, r: CFG.bolt.r, vx: CFG.bolt.speed, vy }; },
+  rocketBolt(x, y) { return { kind: 'bolt', role: 'rocket', x, y, r: CFG.rocket.r, vx: CFG.rocket.speed, vy: 0 }; },
   // count single pixels flying out of (x, y); key seeds the spray, so the same break always looks the same
   debris(x, y, count, role, key, life = CFG.debris.life) {
     const R = RNG('debris', key), D = CFG.debris;

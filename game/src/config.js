@@ -27,4 +27,16 @@ const CFG = {
   audioGrace: 0.5,         // how long the film waits for a suspended audio clock before running silently on the wall clock
   mood: { happy: 0.4, wow: 0.6 },
   engine: { cruise: 0.6, steer: 0.15 },   // the engine's drive at cruise pace, and how much steering adds
+  pickup: { r: 5, speed: [0.5, 0.7], spinRate: 0.8, duration: 10, spawnFrom: 0, share: 0.4 },
+  rocket: { speed: 200, r: 4, length: 7, debrisCount: 12, sparkCount: 6 },
+  spread: { vy: 14 },
+  boss: {
+    scoreAt: 2000,
+    hp: 100, hpStep: 50, r: 14,
+    enterX: 255, enterSpeed: 90,
+    trackSpeed: 65, trackEase: 4,
+    fireRate: [2.2, 1.1], shots: [1, 3], shotSpeed: 135, shotSpread: 20, shotLength: 6,
+    phaseAt: 0.5,
+    points: 300, debrisCount: 28, sparkCount: 14,
+  },
 };

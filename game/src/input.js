@@ -4,7 +4,7 @@
 // =====================================================================
 const KEY_MAP = {
   left: ['ArrowLeft', 'KeyA'], right: ['ArrowRight', 'KeyD'], up: ['ArrowUp', 'KeyW'], down: ['ArrowDown', 'KeyS'],
-  fire: ['Space'], skip: ['Enter', 'Escape'], pause: ['KeyP'], mute: ['KeyM'],
+  fire: ['Space'], skip: ['Enter'], skipEsc: ['Escape'], pause: ['KeyP', 'Escape'], mute: ['KeyM'],
 };
 const Input = {
   held: new Set(), pressed: [],

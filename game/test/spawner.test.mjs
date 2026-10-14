@@ -16,7 +16,9 @@ test('no ice up to 15s, no comets up to 30s', () => {
 test('at 120s and after: the hard level, held', () => {
   for (const t of [120, 500]) {
     const d = Spawner.difficulty(t);
-    near(d.scroll, 300); near(d.interval, 0.45); near(d.mix.rock, 0.6); near(d.mix.ice, 0.3); near(d.mix.comet, 0.1);
+    near(d.scroll, 300); near(d.interval, 0.45); near(d.mix.ice, 0.3); near(d.mix.comet, 0.1);
+    near(d.mix.pickup, CFG.pickup.share);
+    near(d.mix.rock, 1 - 0.3 - 0.1 - CFG.pickup.share);
   }
 });
 test('the scroll speed never drops as time goes on', () => {
@@ -31,6 +33,17 @@ test('the same seed brings the same spawns; another seed does not', () => {
   const run = (seed) => JSON.stringify(Array.from({ length: 50 }, (_, n) => Spawner.next(seed, n, n)));
   assert.equal(run(3), run(3));
   assert.notEqual(run(3), run(4));
+});
+test('pickup share is non-zero from the start and reaches cfg share at 120s', () => {
+  assert.ok(Spawner.difficulty(1).mix.pickup > 0);
+  near(Spawner.difficulty(120).mix.pickup, CFG.pickup.share);
+});
+test('pickup roles are one of the three valid types', () => {
+  const valid = new Set(['spread', 'rocket', 'shield']);
+  for (let n = 0; n < 200; n++) {
+    const s = Spawner.next(11, n, 200);
+    if (s.kind === 'pickup') assert.ok(valid.has(s.role), `unexpected role: ${s.role}`);
+  }
 });
 test('spawned sizes stay inside the configured ranges', () => {
   for (let n = 0; n < 300; n++) {

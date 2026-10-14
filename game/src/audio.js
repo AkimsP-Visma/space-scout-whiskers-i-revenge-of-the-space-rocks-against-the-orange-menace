@@ -92,6 +92,12 @@ const SFX = {
   shieldHit: [0.5, (v) => { v.hiss(0, 'lowpass', 300, 0.8, 0.3, 0.2); v.tone(0.05, 'square', 880, 440, 0.05, 0.25, 3000); }],
   gameOver: [1.6, (v) => [['A4', 0], ['F4', 0.25], ['D4', 0.5], ['A3', 0.75]].forEach(([n, t]) => v.tone(t, 'square', nz(n), nz(n), 0.05, 0.5, 2400))],
   retry: [0.6, (v) => ['D5', 'Fs5', 'A5', 'D6'].forEach((n, i) => v.tone(i * E16, 'square', nz(n), nz(n), 0.06, 0.09))],
+  pickup: [0.4, (v) => { v.tone(0, 'square', 880, 1760, 0.05, 0.12, 6000); v.tone(0.1, 'square', 1320, 2640, 0.04, 0.18, 6000); }],
+  rocketFire: [0.25, (v) => v.hiss(0, 'lowpass', 900, 1.5, 0.14, 0.22)],
+  bossWarn: [1.0, (v) => { [0, 0.25, 0.5].forEach((t, i) => v.tone(t, 'square', 200 + i * 100, 300 + i * 100, 0.10, 0.22, 1000)); }],
+  bossHit: [0.1, (v) => v.hiss(0, 'bandpass', 2200, 1.8, 0.09, 0.08)],
+  bossDeath: [2.0, (v) => { v.hiss(0, 'lowpass', 300, 0.8, 0.28, 1.0); v.hiss(0.15, 'bandpass', 1800, 1.2, 0.14, 0.35); [0, 0.35, 0.7, 1.1].forEach((t) => v.tone(t, 'square', 180, 70, 0.10, 0.45, 700)); }],
+  bossShot: [0.18, (v) => v.hiss(0, 'bandpass', 2800, 2.0, 0.07, 0.14, 900)],
 };
 
 const Sound = {

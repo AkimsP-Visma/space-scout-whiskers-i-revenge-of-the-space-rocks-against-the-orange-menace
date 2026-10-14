@@ -5,12 +5,12 @@
 // =====================================================================
 const CANVAS = document.getElementById('c');
 const IS_TEST = new URLSearchParams(location.search).has('test');
-const EVENT_SOUND = { fire: 'fire', rockHit: 'rockHit', rockBreak: 'rockBreak', iceClank: 'iceClank', cometWarn: 'cometWarn', cometGo: 'cometWhoosh', shieldHit: 'shieldHit', gameOver: 'gameOver' };
+const EVENT_SOUND = { fire: 'fire', rocketFire: 'rocketFire', pickup: 'pickup', rockHit: 'rockHit', rockBreak: 'rockBreak', iceClank: 'iceClank', cometWarn: 'cometWarn', cometGo: 'cometWhoosh', shieldHit: 'shieldHit', gameOver: 'gameOver', bossWarn: 'bossWarn', bossShot: 'bossShot', bossHit: 'bossHit', bossDeath: 'bossDeath' };
 const PILOT_CARD = { from: 14.6, length: 1.4 };   // the film's close-up (14.5-16.0s) looped behind the card: eyes wide, a blink, the gulp
 const FRAME_SAMPLES = 600;                        // play frames kept for the frame-time figures
 const Flow = {
   name: 'title', since: 0, filmAt: null, filmFrame: null, run: null, runs: 0, best: 0, paused: false, error: null,
-  acc: 0, last: 0, frameMs: [], titleFrame: null, card: null, cardB: null,
+  acc: 0, last: 0, frameMs: [], titleFrame: null, card: null, cardB: null, escPending: false, escAt: 0,
   go(name, now) { Flow.name = name; Flow.since = now; },
   secondsIn(now) { return (now - Flow.since) / 1000; },
   seed() { return IS_TEST ? 1 + Flow.runs : (Date.now() % 1e9) + Flow.runs; },
@@ -41,12 +41,13 @@ const Flow = {
     if (t >= LOOP_T) { Flow.startRun(now, Flow.filmAt != null ? Flow.filmAt + LOOP_T : null); Flow.play(now); return; }
     const f = Math.max(0, Math.floor(t * FPS));
     if (f !== Flow.filmFrame) { renderFrame(f / FPS, CANVAS); Flow.filmFrame = f; }
+    if (Flow.escPending && now - Flow.escAt < 3000) Hud.overlay(CANVAS, () => pixText('PRESS ESC AGAIN TO SKIP', PX_W / 2, 170, Q.white, { align: 'center', shadow: Q.ink }));
   },
   // ---- a new run from the seam (after the film, a skip or a retry); musicAt keeps the music on the film's bar line
   startRun(now, musicAt = null) {
     Sound.stopFilm(); Sound.startMusic(musicAt); Sound.engineOn();
     Flow.run = Play.create(Flow.seed(), SEAM_START); Flow.runs++;
-    Flow.acc = 0; Flow.last = now; Flow.paused = false;
+    Flow.acc = 0; Flow.last = now; Flow.paused = false; Flow.escPending = false;
     Flow.go('play', now);
   },
   play(now) {
@@ -91,9 +92,15 @@ const Flow = {
     for (const code of Input.takePressed()) {
       if (Input.is(code, 'mute')) { Sound.setMuted(!Sound.muted); continue; }
       if (Flow.name === 'title') { if (Sound.ready || Sound.failed) Flow.startFilm(now); continue; }
-      if (Flow.name === 'film' && Input.is(code, 'skip')) { Flow.startRun(now); continue; }
+      if (Flow.name === 'film') {
+        if (Input.is(code, 'skip')) { Flow.startRun(now); continue; }
+        if (Input.is(code, 'skipEsc')) {
+          if (Flow.escPending && now - Flow.escAt < 3000) { Flow.startRun(now); continue; }
+          Flow.escPending = true; Flow.escAt = now; Flow.filmFrame = -1; continue;
+        }
+      }
       if (Flow.name === 'play' && Input.is(code, 'pause')) { Flow.paused = !Flow.paused; Flow.last = now; Sound.pause(Flow.paused); continue; }
-      if (Flow.name === 'over' && Input.is(code, 'fire') && Flow.secondsIn(now) >= CFG.gameOver.retryLockout) { Sound.sfx('retry'); Flow.startRun(now); }
+      if (Flow.name === 'over' && (Input.is(code, 'fire') || Input.is(code, 'skip')) && Flow.secondsIn(now) >= CFG.gameOver.retryLockout) { Sound.sfx('retry'); Flow.startRun(now); }
     }
   },
   frame(now) {
