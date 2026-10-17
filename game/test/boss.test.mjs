@@ -54,7 +54,7 @@ test('boss is defeated after CFG.boss.hp hits and gives bonus points', () => {
   for (let i = 0; i < CFG.boss.hp; i++) {
     s.bolts.push(O.bolt(s.boss.x, s.boss.y)); run(s);
   }
-  assert.equal(s.boss, null); assert.equal(s.nextBossScore, 2 * CFG.boss.scoreAt);
+  assert.equal(s.boss, null); assert.equal(s.bossesBeaten, 1); assert.ok(s.nextBossScore > CFG.boss.scoreAt + CFG.boss.every - 1);
   assert.ok(s.rockPoints >= 1000 + CFG.boss.points);
   assert.ok(s.debris.length > 0);
 });

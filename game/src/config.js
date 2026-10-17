@@ -38,7 +38,7 @@ const CFG = {
   rocket: { speed: 200 * VIEW_K, r: 4, length: 7, debrisCount: 12, sparkCount: 6 },
   spread: { vy: 14 * VIEW_K },
   boss: {
-    scoreAt: 2000,
+    scoreAt: 1000, every: 2000,   // the first boss comes at scoreAt, the next ones every `every` points after the last was beaten
     hp: 100, hpStep: 50, r: 14, startY: 135, firstFire: 1.5, shotR: 2,
     enterX: 390, enterSpeed: 90 * VIEW_K,
     trackSpeed: 65 * VIEW_K, trackEase: 4,

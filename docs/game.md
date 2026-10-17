@@ -104,7 +104,7 @@ x -40 minus their radius. Comets go only when the whole 110 px tail has left, so
   with the default gun and 1.6 s with a pickup weapon; a jam lasts about 2.9 s. The shot that jams the gun still
   fires and still spends its round.
   `shield` restores one pip up to the maximum.
-- **The boss** (`boss.js`, numbers in `CFG.boss`) appears at score 2000, 4000, ... with `hp` 100 plus 50 per earlier
+- **The boss** (`boss.js`, numbers in `CFG.boss`) appears at score 1000 (`scoreAt`), then 2000 points after each boss is beaten (`every`), with `hp` 100 plus 50 per earlier
   boss. It enters from the right to `enterX` (tracking the scout's y on the way), then flies one **move** at a time, each
   lasting 3 to 5 s and picked at random, never the same twice running (`RNG('bossMove', seed, bossNum, n)`, so a seed gives
   the same fight): `track` (follow the scout's y), `sweep` (a sine across the scout's whole height), `dash` (to a random

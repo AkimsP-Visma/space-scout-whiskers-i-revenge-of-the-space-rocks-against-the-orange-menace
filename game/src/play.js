@@ -12,7 +12,7 @@ const Play = {
       spawnN: 0, nextSpawn: CFG.seam.firstSpawn, nextMoon: CFG.moon.every, moonFrom: null, nextId: 0,
       player: Player.create(start.x, start.y), objects: [], bolts: [], debris: [], events: [],
       over: false, overAt: null, happyUntil: -1, wowUntil: -1,
-      boss: null, nextBossScore: CFG.boss.scoreAt,
+      boss: null, bossesBeaten: 0, nextBossScore: CFG.boss.scoreAt,
     };
   },
   // the seam eases the world and the engine from the film's slow cruise up to the belt
@@ -68,7 +68,7 @@ const Play = {
   },
   spawn(s) {
     if (!s.boss && s.score >= s.nextBossScore) {
-      const bossNum = s.nextBossScore / CFG.boss.scoreAt;
+      const bossNum = s.bossesBeaten + 1;
       s.boss = Boss.create(CFG.boss.hp + (bossNum - 1) * CFG.boss.hpStep, s.seed, bossNum);
       s.nextSpawn = Infinity; s.events.push('bossWarn'); return;
     }
@@ -99,7 +99,7 @@ const Play = {
     s.rockPoints += CFG.boss.points;
     s.debris.push(...Objects.debris(b.x, b.y, CFG.boss.debrisCount, 'rock', 'boss' + s.seed));
     s.debris.push(...Objects.debris(b.x, b.y, CFG.boss.sparkCount, 'spark', 'bossS' + s.seed));
-    s.boss = null; s.nextBossScore += CFG.boss.scoreAt;
+    s.boss = null; s.bossesBeaten++; s.nextBossScore = s.score + CFG.boss.every;
     s.nextSpawn = s.t + 2;
     s.happyUntil = s.t + 1; s.wowUntil = s.t + 1;
     s.events.push('bossDeath');
