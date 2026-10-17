@@ -62,12 +62,21 @@ const Hud = {
     Hud.box(['SCORE ' + pad(score), 'BEST  ' + pad(best)], Math.round(PIX.h * 0.42));
     if (Hud.blinkOn(t)) pixText('FIRE OR ENTER TO CONTINUE', PIX.w / 2, PIX.h - 28, Q.white, { align: 'center', shadow: Q.ink });
   },
-  // the level select: one row a level, the chosen one marked; bests[i] is level i's best
-  select(levels, chosen, bests, t) {
-    const pad = (n) => String(n).padStart(CFG.score.digits, '0');
-    Hud.box(['SELECT LEVEL'], Math.round(PIX.h * 0.18), { edge: Q.orange });
-    levels.forEach((L, i) => Hud.box([(i === chosen ? '> ' : '  ') + L.id + '  ' + L.name + '   BEST ' + pad(bests[i])], Math.round(PIX.h * 0.38) + i * 22, { edge: i === chosen ? Q.orange : Q.slate }));
-    if (Hud.blinkOn(t)) pixText('FIRE OR ENTER TO START', PIX.w / 2, Math.round(PIX.h * 0.69), Q.white, { align: 'center', shadow: Q.ink });
+  // the level select, beside the scout (its marker, drawn by Draw.marker at MENU_X, MENU_Y0 + row * rowGap): a header, a row a
+  // level with its best, the chosen one lit, and the start prompt, or a notice (a locked level) in its place
+  select(levels, chosen, bests, t, notice) {
+    const M = CFG.menu, pad = (n) => String(n).padStart(CFG.score.digits, '0'), x = MENU_X + M.boxGap;
+    const rows = levels.map((L, i) => L.id + '  ' + L.name + (L.locked ? '' : '  BEST ' + pad(bests[i])));
+    const w = Math.max(...rows.map((r) => pixTextW(r))) + 8, last = MENU_Y0 + (levels.length - 1) * M.rowGap;
+    pixBox(x, MENU_Y0 - 38, pixTextW('SELECT LEVEL') + 8, 13, { bg: Q.ink, edge: Q.orange });
+    pixText('SELECT LEVEL', x + 4, MENU_Y0 - 35, Q.white);
+    levels.forEach((L, i) => {
+      const on = i === chosen;
+      pixBox(x, MENU_Y0 + i * M.rowGap - 6, w, 13, { bg: Q.ink, edge: on ? Q.orange : Q.slate });
+      pixText(rows[i], x + 4, MENU_Y0 + i * M.rowGap - 3, L.locked ? Q.slate : on ? Q.white : Q.ice);
+    });
+    if (notice) pixText('NOT READY YET', x + w / 2, last + 20, Q.red, { align: 'center', shadow: Q.ink });
+    else if (Hud.blinkOn(t)) pixText('FIRE OR ENTER TO START', x + w / 2, last + 20, Q.white, { align: 'center', shadow: Q.ink });
   },
   error(message) {
     const text = String(message).toUpperCase().slice(0, 2 * ERROR_LINE);

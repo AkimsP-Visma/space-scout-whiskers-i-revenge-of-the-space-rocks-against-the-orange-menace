@@ -113,7 +113,7 @@ const Draw = {
   scout(s, v) {
     const p = s.player;
     if (!p.alive || Player.isBlinkedOut(p, s.t)) return;
-    scout(Math.round(p.x - v.ox), Math.round(p.y - v.oy), { throttle: Play.throttleAt(s.t), pilot: Draw.pilot(s) });
+    scout(Math.round(p.x - v.ox), Math.round(p.y - v.oy), { throttle: Play.throttleAt(s.t, s.throttle0), pilot: Draw.pilot(s) });
   },
   frame(canvas, s) {
     ctx = canvas.getContext('2d');
@@ -126,16 +126,26 @@ const Draw = {
     queued.forEach((f) => f());
     PostOverlay.drawAt(v.w);
   },
-  // the belt's backdrop alone on the whole field, scrolling, with a screen drawn over it by screen(): the level complete card and the level select
+  // the belt's backdrop alone, scrolling, with a screen over it drawn by screen(view): the level complete card and the level
+  // select. s.view is the camera (the film's frame easing out to the field, or the whole field)
   menu(canvas, s, screen) {
     ctx = canvas.getContext('2d');
     Draw.setClock(s);
     DEFER = [];
-    const [w, h] = CFG.view.to;
-    lowres([w, h], () => { Backdrop.draw(s); screen(); }, { fx: { pal: PAL16 } });
+    const v = s.view;
+    lowres([v.w, v.h], () => { Backdrop.draw(s); screen(v); }, { fx: { pal: PAL16 } });
     const queued = DEFER;
     DEFER = null;
     queued.forEach((f) => f());
-    PostOverlay.drawAt(w);
+    PostOverlay.drawAt(v.w);
+  },
+  // the scout as the select's marker at field position (x, y); it idles with the film's bob, and for the first moments of the
+  // film's own hand-over it still looks back at the planet, as the film ends
+  // the scout's idle bob (the film's, on the beat) at menu time t
+  bobAt(t) { return Math.floor((FILM_END_TT + t) / BEAT + 1e-6) % 2; },
+  marker(s, m, v) {
+    const bob = Draw.bobAt(s.t);
+    const pilot = Draw.pilot({ t: s.fromFilm ? s.secs : 1, full: !s.fromFilm, complete: false, wowUntil: -1, happyUntil: -1 });
+    scout(Math.round(m.x - v.ox), Math.round(m.y - v.oy) + bob, { throttle: s.throttle, pilot });
   },
 };

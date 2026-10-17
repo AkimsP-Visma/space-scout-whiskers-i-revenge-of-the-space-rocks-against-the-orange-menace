@@ -6,26 +6,30 @@
 //          'shieldHit', 'gameOver', 'overheat', 'bossWarn', 'bossShot', 'bossHit', 'bossDeath', 'levelExit'.
 // =====================================================================
 const Play = {
-  // start: where the scout is; opts.flyIn starts a level on the whole field with the scout flying in from the left
+  // start: where the scout is. opts.flyIn starts a level on the whole field with the scout flying in from opts.from (the
+  // left edge by default). opts.scrolled, scroll0 and throttle0 carry on a backdrop that was already moving (the level select)
   create(seed, start, opts = {}) {
+    const I = CFG.intro, from = opts.from ?? { x: I.from, y: I.y };
+    const dist = Math.hypot(I.to - from.x, I.y - from.y);
     return {
-      seed, t: 0, scroll: CFG.seam.startScroll, scrolled: 0, rockPoints: 0, score: 0, fired: 0,
+      seed, t: 0, scroll: opts.scroll0 ?? CFG.seam.startScroll, scroll0: opts.scroll0 ?? CFG.seam.startScroll, throttle0: opts.throttle0 ?? CFG.seam.throttleFrom,
+      base: opts.scrolled ?? 0, introFrom: from, introDur: clamp(I.dur * dist / (I.to - I.from), I.min, I.dur), scrolled: 0, rockPoints: 0, score: 0, fired: 0,
       spawnN: 0, nextSpawn: CFG.seam.firstSpawn, nextMoon: CFG.moon.every, moonFrom: null, nextId: 0,
       full: !!opts.flyIn, flyIn: !!opts.flyIn, introDone: false, complete: false, completeAt: null, exiting: false, exited: false,
-      player: Player.create(opts.flyIn ? CFG.intro.from : start.x, opts.flyIn ? CFG.intro.y : start.y), objects: [], bolts: [], debris: [], events: [],
+      player: Player.create(opts.flyIn ? from.x : start.x, opts.flyIn ? from.y : start.y), objects: [], bolts: [], debris: [], events: [],
       over: false, overAt: null, happyUntil: -1, wowUntil: -1,
       boss: null, bossDone: false,
     };
   },
   // the seam eases the world and the engine from the film's slow cruise up to the belt
   rampAt(t) { return EZ.io(seg(t, 0, CFG.seam.throttleRamp)); },
-  scrollAt(t) { return lerp(CFG.seam.startScroll, Spawner.difficulty(t).scroll, Play.rampAt(t)); },
-  throttleAt(t) { return lerp(CFG.seam.throttleFrom, 1, Play.rampAt(t)); },
+  scrollAt(t, from = CFG.seam.startScroll) { return lerp(from, Spawner.difficulty(t).scroll, Play.rampAt(t)); },
+  throttleAt(t, from = CFG.seam.throttleFrom) { return lerp(from, 1, Play.rampAt(t)); },
   // how hard the engine works (0..1): the throttle, more as the belt speeds up, more again while the scout steers
   engineAt(s) {
     const E = CFG.engine, pace = seg(s.scroll, CFG.difficulty.scroll[0], CFG.difficulty.scroll[1]);
     const steering = Math.min(1, Math.hypot(s.player.vx, s.player.vy) / CFG.scout.speed);
-    return clamp(Play.throttleAt(s.t) * lerp(E.cruise, 1 - E.steer, pace) + E.steer * steering);
+    return clamp(Play.throttleAt(s.t, s.throttle0) * lerp(E.cruise, 1 - E.steer, pace) + E.steer * steering);
   },
   // how many fixed steps a frame that took gap seconds buys, with the leftover acc; a stall catches up at most maxCatchUp
   catchUp(acc, gap) {
@@ -37,7 +41,7 @@ const Play = {
     s.events = [];
     const frozen = s.over || s.complete;   // the score stops when the run ends or the level is complete
     s.t += dt;
-    s.scroll = Play.scrollAt(s.t);
+    s.scroll = Play.scrollAt(s.t, s.scroll0);
     s.scrolled += s.scroll * dt;
     Play.steerAndFire(s, input, dt);
     Play.spawn(s);
@@ -74,9 +78,9 @@ const Play = {
   },
   // the level's start when it does not follow the film: the scout glides in and slows to its spot; no steering yet
   intro(s) {
-    const I = CFG.intro, p = s.player;
-    p.x = lerp(I.from, I.to, EZ.o3(s.t / I.dur)); p.y = I.y; p.vx = 0; p.vy = 0;
-    if (s.t >= I.dur) s.introDone = true;
+    const I = CFG.intro, p = s.player, u = EZ.o3(s.t / s.introDur);
+    p.x = lerp(s.introFrom.x, I.to, u); p.y = lerp(s.introFrom.y, I.y, u); p.vx = 0; p.vy = 0;
+    if (s.t >= s.introDur) s.introDone = true;
   },
   // level complete: the scout hovers while the boss's debris clears, then accelerates off the right edge
   exit(s, dt) {

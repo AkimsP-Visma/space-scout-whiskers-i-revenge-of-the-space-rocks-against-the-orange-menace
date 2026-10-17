@@ -27,9 +27,11 @@ const CFG = {
   goneX: -40,
   difficulty: { ramp: 120, scroll: [150 * VIEW_K, 300 * VIEW_K], interval: [1.2 / VIEW_K, 0.45 / VIEW_K], iceFrom: 15, cometFrom: 30, ice: 0.3, comet: 0.1 },
   hud: { heatW: 40, heatWarn: 0.7 },   // the heat bar's width, and the heat above which it turns red
-  levels: [{ id: 1, name: 'THE BELT' }],
+  levels: [{ id: 1, name: 'THE BELT' }, { id: 2, name: 'COMING SOON', locked: true }],   // a locked level can be picked but not started yet
   exit: { delay: 1.6, accel: 420, offX: 540 },    // level complete: the scout hovers for delay s, then accelerates off the right edge (offX is where it counts as gone)
-  intro: { from: -40, to: 110, y: 135, dur: 1.4 },   // a level that does not follow the film: the scout flies in from the left
+  intro: { from: -40, to: 192, y: 145, dur: 1.4, min: 0.25 },   // a level that does not follow the film: the scout flies in from where it was (the left edge after a retry, its marker on the level select) to its spot; dur is for the whole way
+  // the level select: the belt's stars flying past, the scout as the marker beside the chosen level
+  menu: { scroll: 150 * VIEW_K, throttle: 0.6, rowGap: 24, boxGap: 38, uiFilm: 1.5, uiRun: 0.4, enterFrom: -40, ease: 7, notice: 1.5, settle: 1.0 },
   score: { pxPerPoint: 10 * VIEW_K, digits: 6, storageKey: 'scout-ring:best' },
   moon: { every: 60, r: 40, top: 260, depth: 0.6, enterX: 520 },
   gameOver: { scoutDebris: 24, burstLife: 0.8, card: 1.0, retryLockout: 0.6 },   // a fire tap right as the card shows does not skip it

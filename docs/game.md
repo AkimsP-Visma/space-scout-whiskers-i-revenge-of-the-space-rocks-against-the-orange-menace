@@ -17,7 +17,7 @@
 | `audio.js` | all sound | `Sound`, `SFX`, `GROOVE`, `musicLoop`, `clipVoices`, `renderClip` |
 | `backdrop.js` | the seam values, the fast nebula, scenery | `FILM_END_TT`, `FILM_END_DIST`, `SEAM_START`, `NebulaField`, `Backdrop.draw(s)` |
 | `hud.js` | screen-fixed UI | `Hud.play`, `title`, `paused`, `card`, `levelComplete`, `select`, `error`, `overlay`, `box` |
-| `draw.js` | one frame of play | `Draw.frame(canvas, s)`, `Draw.menu(canvas, s, screen)`, `Draw.objects`, `Draw.scout`, `Draw.pilot`, `PostOverlay` |
+| `draw.js` | one frame of play | `Draw.frame(canvas, s)`, `Draw.menu(canvas, s, screen)`, `Draw.marker`, `Draw.objects`, `Draw.scout`, `Draw.pilot`, `PostOverlay` |
 | `flow.js` | states, loop, keys, boot, test hooks | `Flow`, `EVENT_SOUND`, `PILOT_CARD` |
 
 Logic files never draw, and drawing files never change state.
@@ -46,21 +46,26 @@ current pixel rows.
 
 A level is the belt run up to its boss. Level 1 (`CFG.levels`: `{ id, name }`) is the only one so far. The flow is:
 
-0. **After the film** (it ends, or Enter / Esc twice skips it) the level select shows, over the film's last frame held still
-   (`Flow.filmDone`, `Flow.afterFilm`); the music carries on from the film's bar line.
-1. **Start.** A level chosen from that first select starts on the film's last frame (the seam, with the camera pulling back,
-   so nothing jumps). Every
-   other start (a retry, or a level chosen from the list) is `Play.create(seed, start, { flyIn: true })`: the whole
-   field from the first frame (`s.full`, so `View.of(s)`), the scout gliding in from the left to `CFG.intro.to` while steering
-   and firing are ignored (`Play.intro`, `CFG.intro.dur`).
+0. **After the film** (it ends, or Enter / Esc twice skips it) the level select takes over without a cut: the film's last frame
+   eases out to the whole field exactly as the seam used to, the stars speed up to `CFG.menu.scroll`, and the scout stays where
+   it was as the select's **marker** (`Draw.marker`; for the first moments it still looks back at the planet). The list appears
+   once the camera has settled (`CFG.menu.uiFilm`). Nothing in it can hurt the scout.
+1. **Start.** Choosing a level from the select (`Flow.startChosen`) starts it with `Play.create(seed, start, { flyIn: true, from,
+   scrolled, scroll0, throttle0 })`: the whole field (`s.full`, so `View.of(s)`), the stars and the engine carrying on at the
+   speed they had (`s.base` is the backdrop's travel before the run, `s.scroll0` and `s.throttle0` its speed and throttle), and
+   the scout gliding from its marker to its spot at `CFG.intro.to`, steering and firing ignored for that glide (`Play.intro`;
+   `s.introDur` is shorter the shorter the glide). A retry after game over is the same with the scout entering from the
+   left edge. A locked level (`locked: true` in `CFG.levels`) only plays a clank and says `NOT READY YET`.
 2. **Beat the boss.** `defeatBoss` sets `s.complete`: enemy bolts are removed, nothing can hurt the scout or be picked up,
    nothing spawns, the score stops (it still includes the boss's points), and keys are ignored.
 3. **Exit.** The scout hovers for `CFG.exit.delay` while the debris clears, then accelerates (`CFG.exit.accel`) off the right
    edge (event `levelExit`, `s.exiting`) until it passes `CFG.exit.offX` (`s.exited`).
 4. **Level complete card** (`Flow.complete`): `LEVEL COMPLETE`, the score and the best (saved per level), over the belt's
    backdrop scrolling on from where the run stopped (`Draw.menu`, `Flow.menuState`). Fire or Enter, after the lockout, continues.
-5. **Level select** (`Flow.select`): one row per level with its best, `>` on the chosen one (up and down move it, fire or
-   Enter starts it). With one level the list has one row.
+5. **Level select** (`Flow.select`): one row per level with its best, the chosen one lit and the scout marker level with it
+   (it glides between rows; up and down move it, fire or Enter starts the level). It is the same live scene whether it
+   follows the film or a level: after a level the stars slow to `CFG.menu.scroll` over `CFG.menu.settle` and the scout flies
+   in from the left edge. `Flow.menu` holds its state (`Flow.menuState(now)` advances it each frame).
 6. **Game over** is unchanged; its retry starts level 1 again with the fly-in.
 
 The best score is kept per level: `BestScore.load(id)` / `save(best, id)`; level 1 keeps the original storage key, level n adds
@@ -174,7 +179,7 @@ x -40 minus their radius. Comets go only when the whole 110 px tail has left, so
 - three shield pips, under them the heat bar, always shown (yellow, red above `CFG.hud.heatWarn`; it blinks with `HOT` beside it
   while the gun is jammed) and under that the active pickup weapon (`SPR` or `RKT`) with its rounds left;
 - while a boss lives, a `WARDEN` hp bar over the middle of the top row (grey, red in phase 2);
-- `LOG 02: BELT AHEAD`, typed over 1 s in the seam and held for 3 s.
+- `LOG 02: BELT AHEAD`, typed over 1 s as a level starts and held for 3 s.
 
 Plus the title prompt, `PAUSED`, the game-over card (`GAME OVER`, `SCORE`, `BEST`, blinking `FIRE OR ENTER TO RESTART`) and an
 error card. Rows are in `HUD_ROW`. HUD helpers that run inside a world pass go through `DEFER`
@@ -186,7 +191,7 @@ error card. Rows are in `HUD_ROW`. HUD helpers that run inside a world pass go t
   game files into one vm context, the way the page joins them. `$(expression)` reads a value out; `plain(value)` copies
   it into the test's realm, because `assert.deepStrictEqual` compares prototypes and the context has its own
   `Object`. Pass `globals` to stub things like `localStorage` or `console`.
-- **Smoke** (`node game/test/smoke.mjs`, 28 checks): rebuilds the page and runs headless Chromium with
+- **Smoke** (`node game/test/smoke.mjs`, 31 checks): rebuilds the page and runs headless Chromium with
   `--autoplay-policy=no-user-gesture-required`. It checks:
   - a key during LOADING is ignored;
   - the seam continuity diff, and the draw time of a busy frame;

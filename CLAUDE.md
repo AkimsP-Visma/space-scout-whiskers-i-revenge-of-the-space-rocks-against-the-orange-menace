@@ -39,7 +39,7 @@ Generated and git-ignored: `index.html` (film page), `game/index.html`, `frames/
 Game:
 - `node game/build.mjs` builds `game/index.html`; open it in a desktop browser.
 - `node --test game/test/*.test.mjs` runs the logic tests (79, about 0.2 s).
-- `node game/test/smoke.mjs` runs the browser test (28 checks, about 40 s). It includes the seam check (the game's
+- `node game/test/smoke.mjs` runs the browser test (31 checks, about 40 s). It includes the seam check (the game's
   first frame against the film's last) and frame time; it writes screenshots to `game/test-output/`. Look at them.
 
 Film (animate plugin; the version folder can change on update, check `ls ~/.claude/plugins/cache/animate/animate/`):

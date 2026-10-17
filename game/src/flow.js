@@ -9,7 +9,7 @@ const EVENT_SOUND = { fire: 'fire', rocketFire: 'rocketFire', pickup: 'pickup', 
 const PILOT_CARD = { from: 14.6, length: 1.4 };   // the film's close-up (14.5-16.0s) looped behind the card: eyes wide, a blink, the gulp
 const FRAME_SAMPLES = 600;                        // play frames kept for the frame-time figures
 const Flow = {
-  name: 'title', since: 0, filmAt: null, filmFrame: null, run: null, runs: 0, bests: [], level: 0, menu: null, afterFilm: false, endFrame: null, paused: false, error: null,
+  name: 'title', since: 0, filmAt: null, filmFrame: null, run: null, runs: 0, bests: [], level: 0, menu: null, deniedAt: -1e9, paused: false, error: null,
   acc: 0, last: 0, frameMs: [], titleFrame: null, card: null, cardB: null, escPending: false, escAt: 0,
   go(name, now) { Flow.name = name; Flow.since = now; },
   levelId() { return CFG.levels[Flow.level].id; },
@@ -45,19 +45,22 @@ const Flow = {
     if (f !== Flow.filmFrame) { renderFrame(f / FPS, CANVAS); Flow.filmFrame = f; }
     if (Flow.escPending && now - Flow.escAt < 3000) Hud.overlay(CANVAS, () => pixText('PRESS ESC AGAIN TO SKIP', PX_W / 2, 170, Q.white, { align: 'center', shadow: Q.ink }));
   },
-  // the film is over (it ran out, or was skipped): the level select over the film's last frame; the music carries on from
-  // the film's bar line, and the level chosen starts from that frame (the seam)
+  // the film is over (it ran out, or was skipped): its last frame eases out into the level select; the music carries on from
+  // the film's bar line, and the level chosen starts from wherever the scout and the stars are
   filmDone(now, musicAt = null) {
     Sound.stopFilm(); Sound.startMusic(musicAt);
-    Flow.afterFilm = true; Flow.escPending = false;
+    Flow.escPending = false;
+    Flow.enterMenu(now, true);
     Flow.go('select', now);
   },
   // ---- a new run: from the film's last frame (after the film or a skip), or else flying in on the whole field (a retry
   // or a level chosen from the list); musicAt keeps the music on the film's bar line
-  startRun(now, musicAt = null, fromFilm = false) {
+  startRun(now, musicAt = null, fromMenu = false) {
     Sound.stopFilm(); Sound.startMusic(musicAt); Sound.engineOn();
-    Flow.run = Play.create(Flow.seed(), SEAM_START, { flyIn: !fromFilm }); Flow.runs++;
-    Flow.acc = 0; Flow.last = now; Flow.paused = false; Flow.escPending = false; Flow.afterFilm = false;
+    const m = Flow.menu, opts = { flyIn: true };
+    if (fromMenu) Object.assign(opts, { from: { x: m.marker.x, y: m.marker.y + Draw.bobAt(m.t0 + (now - m.at) / 1000) }, scrolled: m.scrolled, scroll0: m.scroll, throttle0: CFG.menu.throttle });
+    Flow.run = Play.create(Flow.seed(), SEAM_START, opts); Flow.runs++;
+    Flow.acc = 0; Flow.last = now; Flow.paused = false; Flow.escPending = false;
     Flow.go('play', now);
   },
   play(now) {
@@ -85,30 +88,52 @@ const Flow = {
   // ---- over: the card over the film's pilot close-up, redrawn only when the close-up's clock steps
   saveBest(score) { Flow.bests[Flow.level] = Math.max(Flow.best(), score); BestScore.save(Flow.bests[Flow.level], Flow.levelId()); },
   endRun(now) { Flow.saveBest(Flow.run.score); Flow.cardB = null; Flow.go('over', now); },
-  // ---- complete and select: the belt's backdrop scrolling on, from where the run left it, with a card or the list over it
+  // ---- complete and select: the belt's backdrop scrolling on (stars flying past, nothing that can hurt), with a card or the list
+  // over it. After the film it is the film's last frame easing out and speeding up (the seam, with no scout in the way of the
+  // list: the scout is the marker); after a level it carries on from where the run stopped.
+  enterMenu(now, fromFilm) {
+    const r = Flow.run, M = CFG.menu, start = CFG.seam.startScroll;
+    Flow.menu = fromFilm
+      ? { fromFilm, at: now, t0: 0, scrolled: 0, scroll: start, scroll0: start, last: now, dt: 0, marker: { x: MENU_X, y: MENU_Y0 + Flow.level * M.rowGap } }
+      : { fromFilm, at: now, t0: r.t, scrolled: r.base + r.scrolled, scroll: r.scroll, scroll0: r.scroll, last: now, dt: 0, marker: { x: M.enterFrom, y: MENU_Y0 + Flow.level * M.rowGap } };
+  },
   completeLevel(now) {
     Flow.saveBest(Flow.run.score);
     Sound.engineOff(); Sound.sfx('levelComplete');
-    Flow.menu = { scrolled: Flow.run.scrolled, t: Flow.run.t, at: now };
-    Flow.afterFilm = false;
+    Flow.enterMenu(now, false);
     Flow.go('complete', now);
   },
+  // the menu's world this frame: its clock, how far the stars have travelled, how fast, the camera, the scout's throttle
   menuState(now) {
-    const m = Flow.menu, secs = (now - m.at) / 1000, scroll = CFG.difficulty.scroll[0];
-    return { t: m.t + secs, scrolled: m.scrolled + secs * scroll, scroll, moonFrom: null };
+    const m = Flow.menu, M = CFG.menu, secs = (now - m.at) / 1000;
+    m.dt = clamp((now - m.last) / 1000, 0, 0.1); m.last = now;
+    m.scroll = m.fromFilm ? lerp(m.scroll0, M.scroll, Play.rampAt(secs)) : lerp(m.scroll0, M.scroll, EZ.io(seg(secs, 0, M.settle)));
+    m.scrolled += m.scroll * m.dt;
+    return {
+      t: m.t0 + secs, secs, fromFilm: m.fromFilm, scrolled: m.scrolled, scroll: m.scroll, moonFrom: null,
+      view: m.fromFilm ? View.at(secs) : View.at(0, true),
+      throttle: m.fromFilm ? lerp(CFG.seam.throttleFrom, M.throttle, Play.rampAt(secs)) : M.throttle,
+    };
   },
+  menuReady(now) { return Flow.secondsIn(now) >= (Flow.menu.fromFilm ? CFG.menu.uiFilm : CFG.menu.uiRun); },
   complete(now) {
-    Draw.menu(CANVAS, Flow.menuState(now), () => Hud.levelComplete(Flow.run.score, Flow.best(), Flow.secondsIn(now)));
+    Draw.menu(CANVAS, Flow.menuState(now), () => { hudTag({ at: -1 }); Hud.levelComplete(Flow.run.score, Flow.best(), Flow.secondsIn(now)); });
   },
   select(now) {
-    const list = () => Hud.select(CFG.levels, Flow.level, CFG.levels.map((_, i) => Flow.bests[i] ?? 0), Flow.secondsIn(now));
-    if (Flow.afterFilm) {   // the film's last frame, held, with the list over it
-      if (!Flow.endFrame) { Flow.endFrame = Flow.canvas(); renderFrame(FILM_END, Flow.endFrame); }
-      ctx = CANVAS.getContext('2d'); ctx.drawImage(Flow.endFrame, 0, 0);
-      Hud.overlay(CANVAS, list);
-      return;
-    }
-    Draw.menu(CANVAS, Flow.menuState(now), list);
+    const s = Flow.menuState(now), m = Flow.menu, M = CFG.menu, k = Math.min(1, M.ease * m.dt);
+    m.marker.x += (MENU_X - m.marker.x) * k;
+    m.marker.y += (MENU_Y0 + Flow.level * M.rowGap - m.marker.y) * k;
+    const bests = CFG.levels.map((_, i) => Flow.bests[i] ?? 0), notice = now - Flow.deniedAt < M.notice * 1000;
+    Draw.menu(CANVAS, s, (v) => {
+      hudTag({ at: -1 });
+      Draw.marker(s, m.marker, v);
+      if (Flow.menuReady(now)) Hud.select(CFG.levels, Flow.level, bests, Flow.secondsIn(now), notice);
+    });
+  },
+  // start the chosen level from the select: the stars and the scout carry on from where they are; a locked level only says so
+  startChosen(now) {
+    if (CFG.levels[Flow.level].locked) { Flow.deniedAt = now; Sound.sfx('iceClank'); return; }
+    Sound.sfx('retry'); Flow.startRun(now, null, true);
   },
   over(now) {
     const t = Flow.secondsIn(now);
@@ -140,9 +165,10 @@ const Flow = {
       if (Flow.name === 'complete' && (Input.is(code, 'fire') || Input.is(code, 'skip')) && Flow.secondsIn(now) >= CFG.gameOver.retryLockout) { Sound.sfx('retry'); Flow.go('select', now); continue; }
       if (Flow.name === 'select') {
         const n = CFG.levels.length;
+        if (!Flow.menuReady(now)) continue;
         if (Input.is(code, 'up')) Flow.level = (Flow.level + n - 1) % n;
         else if (Input.is(code, 'down')) Flow.level = (Flow.level + 1) % n;
-        else if ((Input.is(code, 'fire') || Input.is(code, 'skip')) && Flow.secondsIn(now) >= CFG.gameOver.retryLockout) { Sound.sfx('retry'); Flow.startRun(now, null, Flow.afterFilm); }
+        else if ((Input.is(code, 'fire') || Input.is(code, 'skip')) && Flow.menuReady(now)) Flow.startChosen(now);
         continue;
       }
       if (Flow.name === 'over' && (Input.is(code, 'fire') || Input.is(code, 'skip')) && Flow.secondsIn(now) >= CFG.gameOver.retryLockout) { Sound.sfx('retry'); Flow.startRun(now); }
@@ -173,7 +199,7 @@ if (IS_TEST) window.GAME = {
     const r = Flow.run, ms = [...Flow.frameMs].sort((a, b) => a - b);
     return {
       name: Flow.name, ready: Sound.ready, soundFailed: Sound.failed, paused: Flow.paused, error: Flow.error ? String(Flow.error) : null,
-      filmTime: Flow.name === 'film' ? Flow.filmTime(performance.now()) : null, best: Flow.best(), level: Flow.level,
+      marker: Flow.menu ? { x: Flow.menu.marker.x, y: Flow.menu.marker.y } : null, filmTime: Flow.name === 'film' ? Flow.filmTime(performance.now()) : null, best: Flow.best(), level: Flow.level,
       t: r ? r.t : null, score: r ? r.score : null, shields: r ? r.player.shields : null, x: r ? r.player.x : null, y: r ? r.player.y : null,
       fired: r ? r.fired : null, objects: r ? r.objects.length : null,
       frameMs: { median: ms.length ? ms[Math.floor(ms.length / 2)] : null, worst: ms.length ? ms[ms.length - 1] : null, samples: ms.length },

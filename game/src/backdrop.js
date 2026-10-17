@@ -9,6 +9,8 @@ const SEAM_START = {   // the scout's spot there, idle bob included, in field co
   x: SHIP[0] + (CFG.view.to[0] - CFG.view.from[0]) / 2,
   y: SHIP[1] + Math.floor(FILM_END_TT / BEAT + 1e-6) % 2 + (CFG.view.to[1] - CFG.view.from[1]) / 2,
 };
+const MENU_X = SEAM_START.x;   // the scout marker's x on the level select
+const MENU_Y0 = SHIP[1] + (CFG.view.to[1] - CFG.view.from[1]) / 2;   // the first level's row on the select: the scout's own row in the film's last frame
 const FAR_DEPTH = STAR_LAYERS[0].depth;
 const STAR_KEEP_OUT = STAR_R * 3 + 2;                               // the film's clear disc around the planet-star
 
@@ -66,9 +68,10 @@ function wideStars(dist, o) {
 const Backdrop = {
   // the order is the film's: nebula, stars, the planet-star; the moon passes behind everything that can be hit
   draw(s) {
-    const star = [Math.round(PLANET_BEHIND[0] - s.scrolled * FAR_DEPTH), PLANET_BEHIND[1]];
-    NebulaField.draw(s.scrolled);
-    wideStars(FILM_END_DIST + s.scrolled, { streak: Math.max(0, s.scroll - STREAK_FROM) / STREAK_PER, keepOut: [...star, STAR_KEEP_OUT] });
+    const dist = s.scrolled + (s.base ?? 0);   // the backdrop's travel: the run's, on top of what the level select had scrolled
+    const star = [Math.round(PLANET_BEHIND[0] - dist * FAR_DEPTH), PLANET_BEHIND[1]];
+    NebulaField.draw(dist);
+    wideStars(FILM_END_DIST + dist, { streak: Math.max(0, s.scroll - STREAK_FROM) / STREAK_PER, keepOut: [...star, STAR_KEEP_OUT] });
     if (star[0] > -8) oddStar(...star);
     if (s.moonFrom == null) return;
     const M = CFG.moon, x = Math.round(M.enterX - (s.scrolled - s.moonFrom) * M.depth);
