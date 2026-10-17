@@ -4,7 +4,7 @@
 // =====================================================================
 const LOG_LINE = 'LOG 02: BELT AHEAD';
 // rows of the 320x180 grid (captionY is in screen px, as the film's captions are)
-const HUD_ROW = { scoreY: 10, pipsY: 26, weaponY: 36, captionY: 900, promptY: 150, pausedY: 74, cardTop: 4, cardScores: 124, cardPrompt: 169, errorY: 60 };
+const HUD_ROW = { scoreY: 10, pipsY: 26, heatY: 36, weaponY: 46, captionY: 900, promptY: 150, pausedY: 74, cardTop: 4, cardScores: 124, cardPrompt: 169, errorY: 60 };
 const ERROR_LINE = 48;   // glyphs per line on the error card
 const Hud = {
   blinkOn(t, period = 0.5) { return Math.floor(t / period) % 2 === 0; },
@@ -24,9 +24,12 @@ const Hud = {
       pixBox(right - w, HUD_ROW.scoreY, w, 13, { bg: Q.ink, edge: Q.slate });
       pixText(txt, right - w + 3, HUD_ROW.scoreY + 3, Q.ice);
       for (let k = 0; k < CFG.scout.shields; k++) pixBox(right - 7 - k * 9, HUD_ROW.pipsY, 7, 6, { bg: k < s.player.shields ? Q.orange : Q.ink, edge: Q.slate });
+      const hot = s.player.overheated, heat = s.player.heat, bw = CFG.hud.heatW;
+      pixBox(right - bw, HUD_ROW.heatY, bw, 7, { bg: Q.ink, edge: hot && Hud.blinkOn(s.t, 0.15) ? Q.red : Q.slate });
+      prect(right - bw + 2, HUD_ROW.heatY + 2, Math.round((bw - 4) * heat), 3, hot || heat > CFG.hud.heatWarn ? Q.red : Q.yellow);
+      if (hot) pixText('HOT', right - bw - 4 - pixTextW('HOT'), HUD_ROW.heatY, Hud.blinkOn(s.t, 0.15) ? Q.red : Q.white);
       if (s.player.weapon !== 'default') {
-        const secs = Math.max(1, Math.ceil(s.player.weaponUntil - s.t));
-        const label = (s.player.weapon === 'spread' ? 'SPR' : 'RKT') + ' ' + secs;
+        const label = (s.player.weapon === 'spread' ? 'SPR' : 'RKT') + ' ' + s.player.ammo;
         const col = s.player.weapon === 'spread' ? Q.yellow : Q.red;
         pixText(label, right - pixTextW(label), HUD_ROW.weaponY, col);
       }

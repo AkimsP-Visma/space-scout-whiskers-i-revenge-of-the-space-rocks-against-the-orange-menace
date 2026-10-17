@@ -89,7 +89,7 @@ test('collecting a shield pickup adds one shield up to the maximum', () => {
   run(s);
   assert.equal(s.player.shields, CFG.scout.shields);
 });
-test('collecting a spread pickup arms the spread weapon and it expires', () => {
+test('collecting a spread pickup arms the spread weapon and it runs out of ammo', () => {
   const s = quiet();
   const pu = { kind: 'pickup', role: 'spread', x: s.player.x, y: s.player.y, r: CFG.pickup.r, vx: 0, vy: 0, angle: 0, spin: 0 };
   s.objects.push(pu);
@@ -98,9 +98,31 @@ test('collecting a spread pickup arms the spread weapon and it expires', () => {
   const before = s.bolts.length;
   run(s, { x: 0, y: 0, fire: true });
   assert.equal(s.bolts.length - before, 3);
-  // weapon expires after its duration
-  s.player.weaponUntil = s.t - 0.001;
-  run(s); assert.equal(s.player.weapon, 'default');
+  // each trigger pull spends one round, however many bolts it throws; the last one hands back the default gun
+  assert.equal(s.player.ammo, CFG.pickup.ammo.spread - 1);
+  s.player.ammo = 1; s.player.cooldown = 0;
+  run(s, { x: 0, y: 0, fire: true });
+  assert.equal(s.player.weapon, 'default'); assert.equal(s.player.ammo, 0);
+});
+test('a pickup weapon does not run out with time, only with shots', () => {
+  const s = quiet();
+  s.objects.push({ kind: 'pickup', role: 'rocket', x: s.player.x, y: s.player.y, r: CFG.pickup.r, vx: 0, vy: 0, angle: 0, spin: 0 });
+  run(s, idle, 60 * 30);
+  assert.equal(s.player.weapon, 'rocket'); assert.equal(s.player.ammo, CFG.pickup.ammo.rocket);
+});
+test('holding fire on the default gun overheats it and the gun jams until it has cooled', () => {
+  const s = quiet();
+  let hot = null;
+  for (let i = 0; i < 60 * 10 && hot == null; i++) { run(s, firing); if (s.events.includes('overheat')) hot = i; }
+  assert.ok(hot > 60, 'it should take more than a second'); assert.ok(hot < 60 * 5, 'and less than five');
+  assert.equal(s.player.overheated, true);
+  const fired = s.fired; run(s, firing, 30); assert.equal(s.fired, fired);   // jammed
+  run(s, firing, 60 * 3); assert.ok(s.fired > fired);                          // cooled, firing again
+});
+test('a pickup weapon does not heat the gun', () => {
+  const s = quiet(); s.player.weapon = 'spread'; s.player.ammo = 1000;
+  run(s, firing, 120);
+  assert.equal(s.player.heat, 0); assert.equal(s.player.overheated, false);
 });
 test('a rocket bolt one-shots a large rock with no split', () => {
   const s = quiet();

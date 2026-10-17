@@ -3,7 +3,7 @@
 //  bolts against objects, objects against the scout, the score. Each step lists what happened in s.events, for the
 //  sounds and the pilot's face. Never draws.
 //  Events: 'fire', 'rocketFire', 'pickup', 'rockHit', 'rockBreak', 'iceClank', 'cometWarn', 'cometGo',
-//          'shieldHit', 'gameOver', 'bossWarn', 'bossShot', 'bossHit', 'bossDeath'.
+//          'shieldHit', 'gameOver', 'overheat', 'bossWarn', 'bossShot', 'bossHit', 'bossDeath'.
 // =====================================================================
 const Play = {
   create(seed, start) {
@@ -49,10 +49,8 @@ const Play = {
   steerAndFire(s, input, dt) {
     if (s.over) return;
     Player.steer(s.player, input, dt, View.bounds(View.at(s.t)));
-    if (s.player.weapon !== 'default' && s.t >= s.player.weaponUntil) s.player.weapon = 'default';
-    const at = Player.tryFire(s.player, input.fire, dt);
+    const w = s.player.weapon, at = Player.tryFire(s.player, input.fire, dt);
     if (!at) return;
-    const w = s.player.weapon;
     if (w === 'spread') {
       s.bolts.push(Objects.bolt(at.x, at.y));
       s.bolts.push(Objects.bolt(at.x, at.y - 1, -CFG.spread.vy));
@@ -66,6 +64,7 @@ const Play = {
       s.events.push('fire');
     }
     s.fired++;
+    if (Player.spend(s.player)) s.events.push('overheat');
   },
   spawn(s) {
     if (!s.boss && s.score >= s.nextBossScore) {
@@ -156,7 +155,7 @@ const Play = {
       s.player.shields = Math.min(CFG.scout.shields, s.player.shields + 1);
     } else {
       s.player.weapon = role;
-      s.player.weaponUntil = s.t + CFG.pickup.duration;
+      s.player.ammo = CFG.pickup.ammo[role];
     }
     s.happyUntil = s.t + CFG.mood.happy;
     s.events.push('pickup');

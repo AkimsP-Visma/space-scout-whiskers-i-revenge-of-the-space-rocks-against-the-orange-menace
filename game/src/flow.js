@@ -5,7 +5,7 @@
 // =====================================================================
 const CANVAS = document.getElementById('c');
 const IS_TEST = new URLSearchParams(location.search).has('test');
-const EVENT_SOUND = { fire: 'fire', rocketFire: 'rocketFire', pickup: 'pickup', rockHit: 'rockHit', rockBreak: 'rockBreak', iceClank: 'iceClank', cometWarn: 'cometWarn', cometGo: 'cometWhoosh', shieldHit: 'shieldHit', gameOver: 'gameOver', bossWarn: 'bossWarn', bossShot: 'bossShot', bossHit: 'bossHit', bossDeath: 'bossDeath' };
+const EVENT_SOUND = { fire: 'fire', rocketFire: 'rocketFire', pickup: 'pickup', overheat: 'overheat', rockHit: 'rockHit', rockBreak: 'rockBreak', iceClank: 'iceClank', cometWarn: 'cometWarn', cometGo: 'cometWhoosh', shieldHit: 'shieldHit', gameOver: 'gameOver', bossWarn: 'bossWarn', bossShot: 'bossShot', bossHit: 'bossHit', bossDeath: 'bossDeath' };
 const PILOT_CARD = { from: 14.6, length: 1.4 };   // the film's close-up (14.5-16.0s) looped behind the card: eyes wide, a blink, the gulp
 const FRAME_SAMPLES = 600;                        // play frames kept for the frame-time figures
 const Flow = {

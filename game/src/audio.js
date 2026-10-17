@@ -93,6 +93,7 @@ const SFX = {
   gameOver: [1.6, (v) => [['A4', 0], ['F4', 0.25], ['D4', 0.5], ['A3', 0.75]].forEach(([n, t]) => v.tone(t, 'square', nz(n), nz(n), 0.05, 0.5, 2400))],
   retry: [0.6, (v) => ['D5', 'Fs5', 'A5', 'D6'].forEach((n, i) => v.tone(i * E16, 'square', nz(n), nz(n), 0.06, 0.09))],
   pickup: [0.4, (v) => { v.tone(0, 'square', 880, 1760, 0.05, 0.12, 6000); v.tone(0.1, 'square', 1320, 2640, 0.04, 0.18, 6000); }],
+  overheat: [0.5, (v) => { v.hiss(0, 'bandpass', 1400, 1.2, 0.12, 0.4, 400); v.tone(0, 'square', 330, 110, 0.04, 0.4, 1800); }],
   rocketFire: [0.25, (v) => v.hiss(0, 'lowpass', 900, 1.5, 0.14, 0.22)],
   bossWarn: [1.0, (v) => { [0, 0.25, 0.5].forEach((t, i) => v.tone(t, 'square', 200 + i * 100, 300 + i * 100, 0.10, 0.22, 1000)); }],
   bossHit: [0.1, (v) => v.hiss(0, 'bandpass', 2200, 1.8, 0.09, 0.08)],

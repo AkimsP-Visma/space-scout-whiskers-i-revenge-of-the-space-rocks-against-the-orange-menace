@@ -26,13 +26,15 @@ const CFG = {
   spawn: { x: 500, minY: 14, maxY: 270 - 14 },
   goneX: -40,
   difficulty: { ramp: 120, scroll: [150 * VIEW_K, 300 * VIEW_K], interval: [1.2 / VIEW_K, 0.45 / VIEW_K], iceFrom: 15, cometFrom: 30, ice: 0.3, comet: 0.1 },
+  hud: { heatW: 40, heatWarn: 0.7 },   // the heat bar's width, and the heat above which it turns red
   score: { pxPerPoint: 10 * VIEW_K, digits: 6, storageKey: 'scout-ring:best' },
   moon: { every: 60, r: 40, top: 260, depth: 0.6, enterX: 520 },
   gameOver: { scoutDebris: 24, burstLife: 0.8, card: 1.0, retryLockout: 0.6 },   // a fire tap right as the card shows does not skip it
   audioGrace: 0.5,         // how long the film waits for a suspended audio clock before running silently on the wall clock
   mood: { happy: 0.4, wow: 0.6 },
   engine: { cruise: 0.6, steer: 0.15 },   // the engine's drive at cruise pace, and how much steering adds
-  pickup: { r: 5, speed: [0.5, 0.7], spinRate: 0.8, duration: 10, spawnFrom: 0, share: 0.4 },
+  pickup: { r: 5, speed: [0.5, 0.7], spinRate: 0.8, ammo: { spread: 24, rocket: 10 }, spawnFrom: 0, share: 0.4 },   // ammo: trigger pulls a pickup weapon lasts
+  heat: { perShot: 0.12, cool: 0.35, resumeAt: 0.35 },   // the default gun: heat per shot (0..1), cooling per second, and the heat at which a jammed gun fires again
   rocket: { speed: 200 * VIEW_K, r: 4, length: 7, debrisCount: 12, sparkCount: 6 },
   spread: { vy: 14 * VIEW_K },
   boss: {
