@@ -7,9 +7,10 @@
 | `config.js` | every tunable number | `CFG` |
 | `collide.js` | circle tests | `Collide.circles(a, b)`, `scoutHitbox(x, y)`, `hitsScout(scout, o)`, `swept(a, b)` |
 | `spawner.js` | difficulty over time, the next spawn | `Spawner.difficulty(t)`, `Spawner.next(seed, n, t)` |
-| `objects.js` | rocks, ice, comets, bolts, debris as plain records | `Objects.fromSpawn`, `rock`, `bolt`, `debris`, `move`, `isGone`, `hitRock` |
+| `objects.js` | rocks, ice, comets, bolts, debris as plain records | `Objects.fromSpawn`, `rock`, `bolt`, `rocketBolt`, `debris`, `move`, `isGone`, `hitRock` |
 | `player.js` | the scout's steering, firing, shields | `Player.create`, `steer`, `tryFire`, `hit`, `isBlinkedOut` |
-| `play.js` | one run, advanced in fixed steps | `Play.create`, `step`, `scrollAt`, `throttleAt`, `engineAt`, `catchUp`, `forceHit` |
+| `boss.js` | the Drift Warden: entry, tracking, volleys | `Boss.create`, `entered`, `step`, `volley` |
+| `play.js` | one run, advanced in fixed steps | `Play.create`, `step`, `collectPickup`, `defeatBoss`, `scrollAt`, `throttleAt`, `engineAt`, `catchUp`, `forceHit` |
 | `input.js` | held keys and one-shot presses | `KEY_MAP`, `Input.steer()`, `takePressed()`, `is(code, name)`, `attach(target)` |
 | `best-score.js` | the best score in localStorage | `BestScore.load()`, `save(best)` |
 | `audio.js` | all sound | `Sound`, `SFX`, `GROOVE`, `musicLoop`, `clipVoices`, `renderClip` |
@@ -26,17 +27,25 @@ Logic files never draw, and drawing files never change state.
    difficulty's speed over 0.75 s); add to `s.scrolled`.
 2. `steerAndFire`: `Player.steer` eases the velocity toward the held direction, clamped to the scout's area.
    `Player.tryFire` allows at most 6 bolts a second, from the nose. Event: `fire`.
-3. `spawn`: starts a moon every 60 s; while `s.t >= s.nextSpawn`, calls `Spawner.next` then `Objects.fromSpawn`.
+3. `spawn`: when the score reaches `s.nextBossScore` it creates the boss, stops normal spawning and emits `bossWarn`.
+   Otherwise it starts a moon every 60 s; while `s.t >= s.nextSpawn`, calls `Spawner.next` then `Objects.fromSpawn`.
    Event: `cometWarn`.
 4. `move`: records `px, py` (the position before the step) on objects and bolts, then moves everything. A comet sits
    out its 1 s warning at the edge first. Event: `cometGo`.
+   `moveBoss` runs `Boss.step` after `move` and pushes its enemy bolts into `s.objects` (event `bossShot`).
 5. `boltsAgainstObjects`: uses `Collide.swept`, over the whole step (see below).
    - A rock loses 1 hp. At 0 it scores, and a large rock splits into 2 medium rocks while others burst into debris.
      Events: `rockHit`, `rockBreak`.
-   - Ice and comets spark the bolt away. Event: `iceClank`.
+   - Ice and comets spark the bolt away. Event: `iceClank`. Rocket bolts (`role: 'rocket'`) pass through them and
+     destroy a rock outright.
+   - Pickups and enemy bolts are skipped here.
+   - `boltsAgainstBoss`: each bolt that hits costs the boss 1 hp (`bossHit`). At 0, `defeatBoss` scores
+     `CFG.boss.points`, bursts it into debris, schedules the next boss 2000 points on and resumes spawning after 2 s
+     (`bossDeath`).
 6. `objectsAgainstScout`: `Collide.hitsScout` (two circles, smaller than the sprite) plus `Player.hit` (one shield,
    1.5 s invulnerable and blinking, 8 px knockback). A rock that hits breaks. The third hit ends the run (`endRun`
-   bursts the scout into debris). Events: `shieldHit`, `gameOver`.
+   bursts the scout into debris). Events: `shieldHit`, `gameOver`. An enemy bolt that hits is spent and costs a
+   shield. A pickup that touches the scout is collected instead (`collectPickup`, event `pickup`).
 7. `sweep` removes spent and gone things. Then `score = floor(scrolled / 10) + rockPoints`, frozen after game over.
 
 `flow.js` maps events to sounds with `EVENT_SOUND`. The pilot's face comes from `s.happyUntil` / `s.wowUntil`
@@ -53,18 +62,33 @@ Every object is a plain record `{ kind, x, y, r, vx, vy, angle, spin, key, ... }
 - **rock**: adds `size` ('small' | 'medium' | 'large') and `hp`;
 - **ice**: indestructible;
 - **comet**: adds `warn`, the warning seconds left;
-- **bolt**;
+- **pickup**: adds `role` ('spread' | 'rocket' | 'shield'); collected by touch, never shot;
+- **enemyBolt**: fired by the boss, flies left, costs a shield on contact;
+- **bolt**: `role: 'rocket'` marks a rocket;
 - **debris**: `life`, a colour `role` ('rock' | 'spark' | 'scout') and a `shade`; the drawing picks the colours.
 
 The `key` seeds a rock's shape. `Objects.isGone`: debris when its life runs out, bolts past x 330, others past
 x -40 minus their radius. Comets go only when the whole 110 px tail has left, so the tail never vanishes on screen.
+
+## Pickups and the boss
+
+- **Pickups** spawn as a growing share of the mix (`CFG.pickup.share`, 0.4 at the end of the ramp). `spread` fires 3
+  bolts fanned by `CFG.spread.vy`; `rocket` fires slower, bigger bolts that pierce ice and comets and one-shot rocks;
+  both last `CFG.pickup.duration` (10 s) and then the weapon returns to `default` (`player.weapon`, `weaponUntil`).
+  `shield` restores one pip up to the maximum.
+- **The boss** (`boss.js`, numbers in `CFG.boss`) appears at score 2000, 4000, ... with `hp` 100 plus 50 per earlier
+  boss. It enters from the right to `enterX`, tracks the scout's y, and fires volleys of 1 to 3 bolts seeded by
+  `RNG('bossShot', n)`. Below `phaseAt` (half) of its hp it is in phase 2: tracks 1.6x faster, fires faster, and the
+  HUD bar and sprite turn red. Normal spawning is suspended while it lives. Events: `bossWarn`, `bossShot`, `bossHit`,
+  `bossDeath`.
 
 ## Difficulty and spawning
 
 `Spawner.difficulty(t)` over a 120 s ramp, then held:
 - scroll speed 150 to 300 px/s (ease in-out);
 - spawn interval 1.2 to 0.45 s (linear);
-- the mix: ice from 15 s, reaching a 0.3 share, and comets from 30 s, reaching 0.1; rocks take the rest.
+- the mix: ice from 15 s, reaching a 0.3 share, comets from 30 s, reaching 0.1, and pickups from the start,
+  reaching 0.4; rocks take the rest.
 
 `Spawner.next(seed, n, t)` uses `RNG('spawn', seed, n)`, so a seed always gives the same run. The seed comes from
 `Date.now()` and the run index, or is fixed (1 + run index) under `?test`.
@@ -92,20 +116,21 @@ x -40 minus their radius. Comets go only when the whole 110 px tail has left, so
 `Hud.play` shows:
 - the film's `SCOUT 07` tag;
 - `SCORE 000000` where the film's `RANGE` box sat;
-- three shield pips;
+- three shield pips, and under them the active weapon (`SPR` or `RKT`) with seconds left;
+- while a boss lives, a `WARDEN` hp bar over the middle of the top row (grey, red in phase 2);
 - `LOG 02: BELT AHEAD`, typed over 1 s in the seam and held for 3 s.
 
-Plus the title prompt, `PAUSED`, the game-over card (`GAME OVER`, `SCORE`, `BEST`, blinking `SPACE TO RETRY`) and an
+Plus the title prompt, `PAUSED`, the game-over card (`GAME OVER`, `SCORE`, `BEST`, blinking `FIRE OR ENTER TO RESTART`) and an
 error card. Rows are in `HUD_ROW`. HUD helpers that run inside a world pass go through `DEFER`
 (`docs/architecture.md`).
 
 ## Tests
 
-- **Unit** (`node --test game/test/*.test.mjs`, 44 tests): `game/test/load.mjs` loads `vendor/core.js` plus the named
+- **Unit** (`node --test game/test/*.test.mjs`, 61 tests): `game/test/load.mjs` loads `vendor/core.js` plus the named
   game files into one vm context, the way the page joins them. `$(expression)` reads a value out; `plain(value)` copies
   it into the test's realm, because `assert.deepStrictEqual` compares prototypes and the context has its own
   `Object`. Pass `globals` to stub things like `localStorage` or `console`.
-- **Smoke** (`node game/test/smoke.mjs`, 22 checks): rebuilds the page and runs headless Chromium with
+- **Smoke** (`node game/test/smoke.mjs`, 23 checks): rebuilds the page and runs headless Chromium with
   `--autoplay-policy=no-user-gesture-required`. It checks:
   - a key during LOADING is ignored;
   - the seam continuity diff, and the draw time of a busy frame;
@@ -162,4 +187,5 @@ Change one, change the other:
 - `Play.forceHit`'s `gameOver` event is wiped by the next step, so the test walk never plays the game-over sound.
 - Rock and ice spin (`R.n(1.5)`, `R.n(1)` in `spawner.js`) are numbers outside `config.js`.
 - The log box changes size at the seam: the film's 26-glyph box becomes an 18-glyph box.
+- `Boss.step` and `Boss.volley` are tested, but the boss's draw and HUD bar are only checked by eye.
 - M on the title mutes instead of starting, and there is no mute indicator.

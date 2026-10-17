@@ -38,8 +38,8 @@ allows sound; that is its policy, not a design choice.
 |---|---|
 | Arrows / WASD | steer |
 | Space | fire (hold it for auto-fire); retry after a game over |
-| Enter / Esc | skip the film |
-| P | pause |
+| Enter / Esc Esc | skip the film (Esc asks for a second press) |
+| P / Esc | pause |
 | M | mute |
 
 Your best score is kept in your browser. It is not uploaded anywhere. Nobody else needs to know.

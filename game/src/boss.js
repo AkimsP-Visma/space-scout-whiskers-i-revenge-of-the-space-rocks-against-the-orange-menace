@@ -6,8 +6,8 @@
 const Boss = {
   create(hp = CFG.boss.hp) {
     const C = CFG.boss;
-    return { x: CFG.spawn.x + C.r, y: 90, px: CFG.spawn.x + C.r, py: 90, r: C.r,
-             hp, maxHp: hp, vy: 0, nextFire: 1.5, volleys: 0 };
+    return { x: CFG.spawn.x + C.r, y: C.startY, px: CFG.spawn.x + C.r, py: C.startY, r: C.r,
+             hp, maxHp: hp, vy: 0, nextFire: C.firstFire, volleys: 0 };
   },
   entered(b) { return b.x <= CFG.boss.enterX; },
   // advance boss by dt; returns array of enemy bolt records to push into s.objects
@@ -32,7 +32,7 @@ const Boss = {
     const C = CFG.boss, off = -(n - 1) * C.shotSpread / 2;
     return Array.from({ length: n }, (_, i) => ({
       kind: 'enemyBolt', x: b.x - C.r, y: b.y + off + i * C.shotSpread,
-      r: 2, vx: -C.shotSpeed, vy: 0, angle: 0, spin: 0,
+      r: C.shotR, vx: -C.shotSpeed, vy: 0, angle: 0, spin: 0,
     }));
   },
 };

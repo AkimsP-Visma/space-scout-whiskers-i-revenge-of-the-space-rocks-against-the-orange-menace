@@ -32,7 +32,7 @@ const CFG = {
   spread: { vy: 14 },
   boss: {
     scoreAt: 2000,
-    hp: 100, hpStep: 50, r: 14,
+    hp: 100, hpStep: 50, r: 14, startY: 90, firstFire: 1.5, shotR: 2,
     enterX: 255, enterSpeed: 90,
     trackSpeed: 65, trackEase: 4,
     fireRate: [2.2, 1.1], shots: [1, 3], shotSpeed: 135, shotSpread: 20, shotLength: 6,

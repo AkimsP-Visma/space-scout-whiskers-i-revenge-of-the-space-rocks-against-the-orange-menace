@@ -156,6 +156,8 @@ async function walk(browser) {
   const silentFilm = await q.state();
   check(silentFilm.filmTime > 0.3, `?nosound: the film runs on the wall clock (at ${silentFilm.filmTime.toFixed(2)}s)`);
   await q.page.keyboard.press('Escape');
+  check((await q.state()).name === 'film', 'one Esc only asks; the film keeps playing');
+  await q.page.keyboard.press('Escape');
   const silentPlay = await q.until((x) => x.name === 'play', 2000, 'play without sound');
   check(silentPlay.shields === 3, '?nosound: Esc skips into play');
   const blocked = await open(browser, '?test', BLOCKED_AUDIO);
