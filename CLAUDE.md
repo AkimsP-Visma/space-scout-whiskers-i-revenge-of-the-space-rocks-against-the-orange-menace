@@ -26,7 +26,7 @@ src/              the film, shared with the game: head.html (timeline, shots, cu
                   scout.js (ship + tiny pilot), pilot.js (the cat close-up), shots-journey.js, shots-planet.js
                   (the five scenes), bridges.js (per-shot resolution and CRT settings), score.js (film soundtrack)
 piece.json        the film's manifest for the animate plugin (style, scene file order)
-game/             build.mjs, src/ (13 game files), vendor/ (copy of the animate kit), test/, README.md
+game/             build.mjs, src/ (15 game files), vendor/ (copy of the animate kit), test/, README.md
 docs/             architecture, rendering, film, game, lessons; images/; superpowers/ (original game spec + plan)
 brief.md, LOG.md  the film's brief and its production log
 ```
@@ -38,7 +38,7 @@ Generated and git-ignored: `index.html` (film page), `game/index.html`, `frames/
 
 Game:
 - `node game/build.mjs` builds `game/index.html`; open it in a desktop browser.
-- `node --test game/test/*.test.mjs` runs the logic tests (61, about 0.2 s).
+- `node --test game/test/*.test.mjs` runs the logic tests (65, about 0.2 s).
 - `node game/test/smoke.mjs` runs the browser test (23 checks, about 40 s). It includes the seam check (the game's
   first frame against the film's last) and frame time; it writes screenshots to `game/test-output/`. Look at them.
 
@@ -60,7 +60,7 @@ node $ANIM/tools/review.mjs .                         # checks + contact sheets 
 
 1. **`src/` is shared by the film and the game.** Every change there changes both. After editing `src/`: rebuild the
    film with the plugin, look at stills, and run the game's smoke test.
-2. **All drawing is on the 320x180 grid** inside `lowres(RES, () => ...)`, in whole pixels (`Math.round`), with the
+2. **All drawing is on a low-res grid** (the film's 320x180; in play the camera's, up to 480x270, see `docs/game.md`) inside `lowres(...)`, in whole pixels (`Math.round`), with the
    PAL16 palette (`Q.*`) and the pixel kit's primitives (`prect`, `pset`, `ppoly`, `pellipse`, `pline`, `pdither`,
    `pglow`, `sprite`, `pixText`). No canvas arcs, strokes, `fillText`, alpha fades or smooth gradients: dither instead.
 3. **Colour has meaning.** Orange is the scout's alone (ship stripe, flame, pilot, bolts, HUD tag edge). Pink and

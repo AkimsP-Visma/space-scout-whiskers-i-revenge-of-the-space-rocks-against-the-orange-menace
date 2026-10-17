@@ -10,17 +10,17 @@ const Hud = {
   blinkOn(t, period = 0.5) { return Math.floor(t / period) % 2 === 0; },
   // centred lines of pixel text in one box whose top is row y
   box(lines, y, o = {}) {
-    const w = Math.max(...lines.map((l) => pixTextW(l))) + 8, h = lines.length * 10 + 4, x = Math.round((PX_W - w) / 2);
+    const w = Math.max(...lines.map((l) => pixTextW(l))) + 8, h = lines.length * 10 + 4, x = Math.round((PIX.w - w) / 2);
     pixBox(x, y, w, h, { bg: Q.ink, edge: o.edge ?? Q.orange });
-    lines.forEach((l, i) => pixText(l, PX_W / 2, y + 3 + i * 10, o.fg ?? Q.white, { align: 'center' }));
+    lines.forEach((l, i) => pixText(l, PIX.w / 2, y + 3 + i * 10, o.fg ?? Q.white, { align: 'center' }));
   },
-  // a transparent pass over the finished frame on canvas, in the 320x180 grid
-  overlay(canvas, draw) { ctx = canvas.getContext('2d'); lowres(RES, draw); },
+  // a transparent pass over the finished frame on canvas, in the 320x180 grid (or the camera's, when given)
+  overlay(canvas, draw, res = RES) { ctx = canvas.getContext('2d'); lowres(res, draw); },
   // in play: the film's SCOUT 07 tag, the score where the film's RANGE sat, shield pips under it, the log line in the seam
   play(s) {
     hudTag({ at: -1 });
     pixOverlay(() => {
-      const txt = 'SCORE ' + String(s.score).padStart(CFG.score.digits, '0'), w = pixTextW(txt) + 6, right = PX_W - 11;
+      const txt = 'SCORE ' + String(s.score).padStart(CFG.score.digits, '0'), w = pixTextW(txt) + 6, right = PIX.w - 11;
       pixBox(right - w, HUD_ROW.scoreY, w, 13, { bg: Q.ink, edge: Q.slate });
       pixText(txt, right - w + 3, HUD_ROW.scoreY + 3, Q.ice);
       for (let k = 0; k < CFG.scout.shields; k++) pixBox(right - 7 - k * 9, HUD_ROW.pipsY, 7, 6, { bg: k < s.player.shields ? Q.orange : Q.ink, edge: Q.slate });
@@ -33,7 +33,7 @@ const Hud = {
       if (s.boss) {
         const B = s.boss, phase2 = B.hp <= B.maxHp * CFG.boss.phaseAt, col = phase2 ? Q.red : Q.grey;
         const label = 'WARDEN', lw = pixTextW(label), barW = 60;
-        const totalW = lw + barW + 8, boxX = Math.round((PX_W - totalW) / 2);
+        const totalW = lw + barW + 8, boxX = Math.round((PIX.w - totalW) / 2);
         pixBox(boxX, HUD_ROW.scoreY, totalW, 13, { bg: Q.ink, edge: col });
         pixText(label, boxX + 3, HUD_ROW.scoreY + 3, col);
         prect(boxX + lw + 6, HUD_ROW.scoreY + 4, Math.max(0, Math.round(barW * B.hp / B.maxHp)), 5, col);
@@ -43,14 +43,14 @@ const Hud = {
   },
   title(t, state) {
     const text = state === 'loading' ? 'LOADING' : state === 'silent' ? 'PRESS ANY KEY (NO SOUND)' : 'PRESS ANY KEY';
-    if (state === 'loading' || Hud.blinkOn(t)) pixText(text, PX_W / 2, HUD_ROW.promptY, Q.white, { align: 'center', shadow: Q.ink });
+    if (state === 'loading' || Hud.blinkOn(t)) pixText(text, PIX.w / 2, HUD_ROW.promptY, Q.white, { align: 'center', shadow: Q.ink });
   },
   paused() { Hud.box(['PAUSED', 'P TO PLAY ON'], HUD_ROW.pausedY); },
   card(score, best, t) {
     const pad = (n) => String(n).padStart(CFG.score.digits, '0');
     Hud.box(['GAME OVER'], HUD_ROW.cardTop, { edge: Q.red });
     Hud.box(['SCORE ' + pad(score), 'BEST  ' + pad(best)], HUD_ROW.cardScores);
-    if (Hud.blinkOn(t)) pixText('FIRE OR ENTER TO RESTART', PX_W / 2, HUD_ROW.cardPrompt, Q.white, { align: 'center', shadow: Q.ink });
+    if (Hud.blinkOn(t)) pixText('FIRE OR ENTER TO RESTART', PIX.w / 2, HUD_ROW.cardPrompt, Q.white, { align: 'center', shadow: Q.ink });
   },
   error(message) {
     const text = String(message).toUpperCase().slice(0, 2 * ERROR_LINE);

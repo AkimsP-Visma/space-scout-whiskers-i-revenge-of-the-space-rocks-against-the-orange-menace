@@ -30,8 +30,8 @@ test('debris expires at 0.6s', () => {
   for (let i = 0; i < 2; i++) O.move(d, 1 / 60);
   assert.equal(O.isGone(d), true);
 });
-test('bolts are gone past x 330, objects past the left edge', () => {
-  const b = O.bolt(329, 50);
+test('bolts are gone past CFG.bolt.goneX, objects past the left edge', () => {
+  const b = O.bolt(CFG.bolt.goneX - 1, 50);
   assert.equal(O.isGone(b), false); O.move(b, 0.01); assert.equal(O.isGone(b), true);
   const r = O.rock('small', -40, 50, 3, -150, 0, 0, 'g');
   assert.equal(O.isGone(r), false); O.move(r, 0.1); assert.equal(O.isGone(r), true);

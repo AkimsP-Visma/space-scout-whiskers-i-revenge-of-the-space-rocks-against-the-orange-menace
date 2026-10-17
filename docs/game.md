@@ -9,6 +9,7 @@
 | `spawner.js` | difficulty over time, the next spawn | `Spawner.difficulty(t)`, `Spawner.next(seed, n, t)` |
 | `objects.js` | rocks, ice, comets, bolts, debris as plain records | `Objects.fromSpawn`, `rock`, `bolt`, `rocketBolt`, `debris`, `move`, `isGone`, `hitRock` |
 | `player.js` | the scout's steering, firing, shields | `Player.create`, `steer`, `tryFire`, `hit`, `isBlinkedOut` |
+| `view.js` | the camera over the play field | `View.at(t)`, `View.bounds(v)` |
 | `boss.js` | the Drift Warden: entry, tracking, volleys | `Boss.create`, `entered`, `step`, `volley` |
 | `play.js` | one run, advanced in fixed steps | `Play.create`, `step`, `collectPickup`, `defeatBoss`, `scrollAt`, `throttleAt`, `engineAt`, `catchUp`, `forceHit` |
 | `input.js` | held keys and one-shot presses | `KEY_MAP`, `Input.steer()`, `takePressed()`, `is(code, name)`, `attach(target)` |
@@ -20,6 +21,26 @@
 | `flow.js` | states, loop, keys, boot, test hooks | `Flow`, `EVENT_SOUND`, `PILOT_CARD` |
 
 Logic files never draw, and drawing files never change state.
+
+## The field and the camera
+
+Play happens in a **480x270 field** (`CFG.view.to`), 1.5x the film's 320x180 grid each way, drawn with the same sprites,
+so everything is smaller on screen and there is more room. All object, scout and boss coordinates are field
+coordinates. The run opens on the film's exact last frame, which sits centred in the field (`SEAM_START` adds the
+centring offset), then after `CFG.view.delay` the camera pulls back over `CFG.view.dur` to the whole field.
+`View.at(t)` gives the camera `{ w, h, ox, oy }`: the screen shows the field rectangle at (ox, oy), `w` x `h` low-res
+pixels wide, and `Draw` subtracts (ox, oy) from every position. The pixel size changes with `w` (6 screen px at 320,
+4 at 480), so mid-pull the pixels are not whole screen pixels; it lasts about a second. The scout is kept inside the
+camera (`View.bounds`, passed to `Player.steer`).
+
+`VIEW_K` (1.5, top of `config.js`) scales every distance and speed that was tuned on the film's grid, and divides the
+spawn intervals, so a run plays as it did in a bigger field. Change it with `CFG.view.to`, and check `spawn.x`,
+`moon.enterX`, `comet.warnX`, `bolt.goneX` and `boss.enterX`, which are written as field positions.
+
+Drawing notes: the backdrop draws in camera pixels (the nebula computes only the visible part; the film's starfield is
+tiled with `wideStars`), the film's `rock`, `comet` and `moonBody` clamp to `PIX.w` x `PIX.h` rather than a fixed
+320x180, the HUD sits against `PIX.w`, and `PostOverlay.drawAt` keeps the vignette fixed and puts the scanlines on the
+current pixel rows.
 
 ## One step of play (`Play.step(s, input, dt)`)
 
@@ -126,7 +147,7 @@ error card. Rows are in `HUD_ROW`. HUD helpers that run inside a world pass go t
 
 ## Tests
 
-- **Unit** (`node --test game/test/*.test.mjs`, 61 tests): `game/test/load.mjs` loads `vendor/core.js` plus the named
+- **Unit** (`node --test game/test/*.test.mjs`, 65 tests): `game/test/load.mjs` loads `vendor/core.js` plus the named
   game files into one vm context, the way the page joins them. `$(expression)` reads a value out; `plain(value)` copies
   it into the test's realm, because `assert.deepStrictEqual` compares prototypes and the context has its own
   `Object`. Pass `globals` to stub things like `localStorage` or `console`.
@@ -169,6 +190,7 @@ Change one, change the other:
 
 | game | film | what |
 |---|---|---|
+| `STAR_TILES` in `backdrop.js` | `STAR_WRAP`, `PX_H` in `src/space.js` | the star tiles must repeat the film's field at its own period |
 | `NEB` in `backdrop.js` | `nebula()` defaults in `src/space.js` (seed 3, tilt 0.16, row 64, spread 40, thresholds) | the fast nebula must match the film's |
 | `GROOVE` in `audio.js` | `PROG`, `ROOT` in `src/score.js` | the game music continues the film's groove |
 | `ENGINE_IDLE`, `ENGINE_FULL` in `audio.js` | the `ENGINE` keys in `src/score.js` | the engine's range |

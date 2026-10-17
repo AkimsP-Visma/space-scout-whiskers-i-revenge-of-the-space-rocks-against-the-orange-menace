@@ -56,7 +56,7 @@ const Flow = {
     Draw.frame(CANVAS, Flow.run);
     Flow.frameMs.push(performance.now() - t0);
     if (Flow.frameMs.length > FRAME_SAMPLES) Flow.frameMs.shift();
-    if (Flow.paused) Hud.overlay(CANVAS, () => Hud.paused());
+    if (Flow.paused) { const v = View.at(Flow.run.t); Hud.overlay(CANVAS, () => Hud.paused(), [v.w, v.h]); }
     if (Flow.run.over && Flow.run.t - Flow.run.overAt >= CFG.gameOver.card) Flow.endRun(now);
   },
   advance(now) {

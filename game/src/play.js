@@ -48,7 +48,7 @@ const Play = {
   },
   steerAndFire(s, input, dt) {
     if (s.over) return;
-    Player.steer(s.player, input, dt);
+    Player.steer(s.player, input, dt, View.bounds(View.at(s.t)));
     if (s.player.weapon !== 'default' && s.t >= s.player.weaponUntil) s.player.weapon = 'default';
     const at = Player.tryFire(s.player, input.fire, dt);
     if (!at) return;

@@ -5,12 +5,12 @@
 const Player = {
   create(x, y) { return { x, y, vx: 0, vy: 0, shields: CFG.scout.shields, invulnerable: 0, cooldown: 0, alive: true, weapon: 'default', weaponUntil: 0 }; },
   // the velocity eases toward the held direction at full speed, so the scout has a little weight but stops quickly
-  steer(p, input, dt) {
+  steer(p, input, dt, area = CFG.scout) {
     const S = CFG.scout, len = Math.hypot(input.x, input.y) || 1, k = Math.min(1, S.ease * dt);
     p.vx += ((input.x / len) * S.speed - p.vx) * k;
     p.vy += ((input.y / len) * S.speed - p.vy) * k;
-    p.x = clamp(p.x + p.vx * dt, S.minX, S.maxX);
-    p.y = clamp(p.y + p.vy * dt, S.minY, S.maxY);
+    p.x = clamp(p.x + p.vx * dt, area.minX, area.maxX);
+    p.y = clamp(p.y + p.vy * dt, area.minY, area.maxY);
     p.invulnerable = Math.max(0, p.invulnerable - dt);
   },
   // where a new bolt starts (the nose) when firing is held and the gun has cooled, else null

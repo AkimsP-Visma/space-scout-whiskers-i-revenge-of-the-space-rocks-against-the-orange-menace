@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { loadGame } from './load.mjs';
 
-const $ = loadGame(['config.js', 'collide.js', 'spawner.js', 'objects.js', 'player.js', 'play.js']);
+const $ = loadGame(['config.js', 'collide.js', 'spawner.js', 'objects.js', 'player.js', 'view.js', 'play.js']);
 const Play = $('Play'), O = $('Objects'), Spawner = $('Spawner'), CFG = $('CFG');
 const START = { x: 112, y: 100 }, idle = { x: 0, y: 0, fire: false }, firing = { x: 0, y: 0, fire: true };
 const run = (s, input = idle, n = 1) => { for (let i = 0; i < n; i++) Play.step(s, input, 1 / 60); };

@@ -7,7 +7,7 @@ const near = (a, b) => assert.ok(Math.abs(a - b) < 1e-9, `${a} is not ${b}`);
 
 test('at the start: slow, sparse, rocks only', () => {
   const d = Spawner.difficulty(0);
-  near(d.scroll, 150); near(d.interval, 1.2); near(d.mix.rock, 1); near(d.mix.ice, 0); near(d.mix.comet, 0);
+  near(d.scroll, CFG.difficulty.scroll[0]); near(d.interval, CFG.difficulty.interval[0]); near(d.mix.rock, 1); near(d.mix.ice, 0); near(d.mix.comet, 0);
 });
 test('no ice up to 15s, no comets up to 30s', () => {
   near(Spawner.difficulty(15).mix.ice, 0); near(Spawner.difficulty(30).mix.comet, 0);
@@ -16,7 +16,7 @@ test('no ice up to 15s, no comets up to 30s', () => {
 test('at 120s and after: the hard level, held', () => {
   for (const t of [120, 500]) {
     const d = Spawner.difficulty(t);
-    near(d.scroll, 300); near(d.interval, 0.45); near(d.mix.ice, 0.3); near(d.mix.comet, 0.1);
+    near(d.scroll, CFG.difficulty.scroll[1]); near(d.interval, CFG.difficulty.interval[1]); near(d.mix.ice, 0.3); near(d.mix.comet, 0.1);
     near(d.mix.pickup, CFG.pickup.share);
     near(d.mix.rock, 1 - 0.3 - 0.1 - CFG.pickup.share);
   }
