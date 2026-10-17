@@ -25,7 +25,7 @@ test('boss starts off-screen right and enters to enterX', () => {
   s.rockPoints = CFG.boss.scoreAt; run(s, idle, 2);
   assert.ok(s.boss.x > CFG.boss.enterX);   // still entering
   run(s, idle, 180);                        // give it 3s to reach enterX
-  assert.ok(Math.abs(s.boss.x - CFG.boss.enterX) < 2);
+  assert.equal(s.boss.in, true);
 });
 test('boss fires volleys once entered; phase 1 fires 3 shots', () => {
   const s = quiet();
@@ -87,4 +87,34 @@ test('player bolts pass through enemy bolts without destroying them', () => {
   run(s, idle, 3);
   assert.ok(!eb.spent || s.objects.includes(eb) === false);   // bolt may have passed, but no iceClank or rockBreak
   assert.equal(s.events.filter((e) => e === 'iceClank' || e === 'rockBreak').length, 0);
+});
+
+// the boss on its own: a boss that has already entered, a scout that sits still, and a run of seconds
+const fight = (seed, seconds, hp) => {
+  const b = Boss.create(hp, seed, 1); b.x = CFG.boss.enterX; b.nextFire = Infinity;
+  const seen = [], ys = [], xs = [];
+  for (let i = 0; i < seconds * 60; i++) { Boss.step(b, { x: 100, y: 135 }, 1 / 60); ys.push(b.y); xs.push(b.x); if (seen[seen.length - 1] !== b.move) seen.push(b.move); }
+  return { b, seen, ys, xs };
+};
+test('the boss flies every kind of move, never the same one twice running', () => {
+  const { seen } = fight(1, 120);
+  for (const m of CFG.boss.moves.list) assert.ok(seen.includes(m), m + ' never came up');
+  seen.forEach((m, i) => { if (i) assert.notEqual(m, seen[i - 1]); });
+});
+test('the same seed gives the same fight, another seed a different one', () => {
+  const a = fight(7, 60), b = fight(7, 60), c = fight(8, 60);
+  assert.deepEqual(a.seen, b.seen); assert.deepEqual(a.ys, b.ys);
+  assert.notDeepEqual(a.seen, c.seen);
+});
+test('the boss uses the whole height of the field and stays inside it', () => {
+  const { ys, xs } = fight(3, 120), [top, bottom] = Boss.span();
+  assert.ok(Math.min(...ys) >= top - 1e-9 && Math.max(...ys) <= bottom + 1e-9);
+  assert.ok(Math.min(...ys) < top + 30, 'it should reach the top'); assert.ok(Math.max(...ys) > bottom - 30, 'and the bottom');
+  assert.ok(Math.min(...xs) >= CFG.boss.moves.xRange[0] && Math.max(...xs) <= CFG.boss.moves.xRange[1]);
+  assert.ok(Math.max(...xs) - Math.min(...xs) > 40, 'and move in x too');
+});
+test('the boss fires from wherever it is once it has entered, in any move', () => {
+  const b = Boss.create(100, 5, 1); b.x = CFG.boss.enterX; let shots = 0;
+  for (let i = 0; i < 60 * 30; i++) shots += Boss.step(b, { x: 100, y: 135 }, 1 / 60).length;
+  assert.ok(shots >= 20);
 });

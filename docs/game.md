@@ -105,9 +105,13 @@ x -40 minus their radius. Comets go only when the whole 110 px tail has left, so
   fires and still spends its round.
   `shield` restores one pip up to the maximum.
 - **The boss** (`boss.js`, numbers in `CFG.boss`) appears at score 2000, 4000, ... with `hp` 100 plus 50 per earlier
-  boss. It enters from the right to `enterX`, tracks the scout's y, and fires volleys of 1 to 3 bolts seeded by
-  `RNG('bossShot', n)`. Below `phaseAt` (half) of its hp it is in phase 2: tracks 1.6x faster, fires faster, and the
-  HUD bar and sprite turn red. Normal spawning is suspended while it lives. Events: `bossWarn`, `bossShot`, `bossHit`,
+  boss. It enters from the right to `enterX` (tracking the scout's y on the way), then flies one **move** at a time, each
+  lasting 3 to 5 s and picked at random, never the same twice running (`RNG('bossMove', seed, bossNum, n)`, so a seed gives
+  the same fight): `track` (follow the scout's y), `sweep` (a sine across the scout's whole height), `dash` (to a random
+  spot in its x range and the whole height, a new spot every 1.2 s) and `weave` (a loop across x and y). It fires volleys
+  of 1 to 3 bolts seeded by `RNG('bossShot', n)` from wherever it is. Its y span is the scout's whole area
+  (`Boss.span()`) and its x stays in `CFG.boss.moves.xRange`. Below `phaseAt` (half) of its hp it is in phase 2: it moves
+  1.6x faster, picks moves 30% shorter, fires faster, and the HUD bar and sprite turn red. Normal spawning is suspended while it lives. Events: `bossWarn`, `bossShot`, `bossHit`,
   `bossDeath`.
 
 ## Difficulty and spawning
@@ -155,7 +159,7 @@ error card. Rows are in `HUD_ROW`. HUD helpers that run inside a world pass go t
 
 ## Tests
 
-- **Unit** (`node --test game/test/*.test.mjs`, 70 tests): `game/test/load.mjs` loads `vendor/core.js` plus the named
+- **Unit** (`node --test game/test/*.test.mjs`, 74 tests): `game/test/load.mjs` loads `vendor/core.js` plus the named
   game files into one vm context, the way the page joins them. `$(expression)` reads a value out; `plain(value)` copies
   it into the test's realm, because `assert.deepStrictEqual` compares prototypes and the context has its own
   `Object`. Pass `globals` to stub things like `localStorage` or `console`.

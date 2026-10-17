@@ -69,7 +69,7 @@ const Play = {
   spawn(s) {
     if (!s.boss && s.score >= s.nextBossScore) {
       const bossNum = s.nextBossScore / CFG.boss.scoreAt;
-      s.boss = Boss.create(CFG.boss.hp + (bossNum - 1) * CFG.boss.hpStep);
+      s.boss = Boss.create(CFG.boss.hp + (bossNum - 1) * CFG.boss.hpStep, s.seed, bossNum);
       s.nextSpawn = Infinity; s.events.push('bossWarn'); return;
     }
     if (s.boss) return;

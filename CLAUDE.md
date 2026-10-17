@@ -38,7 +38,7 @@ Generated and git-ignored: `index.html` (film page), `game/index.html`, `frames/
 
 Game:
 - `node game/build.mjs` builds `game/index.html`; open it in a desktop browser.
-- `node --test game/test/*.test.mjs` runs the logic tests (70, about 0.2 s).
+- `node --test game/test/*.test.mjs` runs the logic tests (74, about 0.2 s).
 - `node game/test/smoke.mjs` runs the browser test (23 checks, about 40 s). It includes the seam check (the game's
   first frame against the film's last) and frame time; it writes screenshots to `game/test-output/`. Look at them.
 

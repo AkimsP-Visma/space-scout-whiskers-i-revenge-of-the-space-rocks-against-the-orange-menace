@@ -42,6 +42,10 @@ const CFG = {
     hp: 100, hpStep: 50, r: 14, startY: 135, firstFire: 1.5, shotR: 2,
     enterX: 390, enterSpeed: 90 * VIEW_K,
     trackSpeed: 65 * VIEW_K, trackEase: 4,
+    // once in, it flies one move at a time, each picked at random (never the same twice running): track the scout,
+    // sweep the whole height, dash between random spots, or weave in a loop across x and y
+    moves: { list: ['track', 'sweep', 'dash', 'weave'], length: [3, 5], phase2Length: 0.7, speed: 120 * VIEW_K, phase2Speed: 1.6, xRange: [340, 450],
+             sweepPeriod: 4.2, dashEvery: 1.2, weavePeriod: [3.6, 2.4], weaveX: 50, reach: 0.95 },
     fireRate: [2.2, 1.1], shots: [1, 3], shotSpeed: 135 * VIEW_K, shotSpread: 20, shotLength: 6,
     phaseAt: 0.5,
     points: 300, debrisCount: 28, sparkCount: 14,
