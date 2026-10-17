@@ -119,7 +119,7 @@ Every object is a plain record `{ kind, x, y, r, vx, vy, angle, spin, key, ... }
 - **bolt**: `role: 'rocket'` marks a rocket;
 - **debris**: `life`, a colour `role` ('rock' | 'spark' | 'scout') and a `shade`; the drawing picks the colours.
 
-The `key` seeds a rock's shape. `Objects.isGone`: debris when its life runs out, bolts past x 330, others past
+The `key` seeds a rock's shape. `Objects.isGone`: debris when its life runs out, bolts past `CFG.bolt.goneX` (490), others past
 x -40 minus their radius. Comets go only when the whole 110 px tail has left, so the tail never vanishes on screen.
 
 ## Pickups and the boss
