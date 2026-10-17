@@ -1,7 +1,8 @@
 // =====================================================================
 //  FLOW - the page's states and main loop. title: the film's first frame while the sounds render; film: the film once,
-//  on the audio clock; play: the seam, then the belt; over: the burst, then the card; complete: the level complete card, then select: the level list. P pauses, M mutes; a crash stops
-//  the loop and shows itself on screen. ?test exposes window.GAME (the state and a hit trigger) for the smoke test.
+//  on the audio clock; select: the level list over a live scene (after the film, and after a level); play: a level, from
+//  its start to its boss; over: the burst, then the card; complete: the level complete card. P pauses, M mutes; a crash
+//  stops the loop and shows itself on screen. ?test exposes window.GAME (the state, a hit and a win trigger) for the smoke test.
 // =====================================================================
 const CANVAS = document.getElementById('c');
 const IS_TEST = new URLSearchParams(location.search).has('test');

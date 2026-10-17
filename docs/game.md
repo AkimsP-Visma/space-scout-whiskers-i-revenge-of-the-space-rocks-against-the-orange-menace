@@ -73,11 +73,13 @@ The best score is kept per level: `BestScore.load(id)` / `save(best, id)`; level
 
 ## One step of play (`Play.step(s, input, dt)`)
 
-1. `s.events = []`; advance `s.t`; set `s.scroll` with `Play.scrollAt` (eases from the film's 18 px/s cruise to the
-   difficulty's speed over 0.75 s); add to `s.scrolled`.
-2. `steerAndFire`: `Player.steer` eases the velocity toward the held direction, clamped to the scout's area.
-   `Player.tryFire` allows at most 6 bolts a second, from the nose. Event: `fire`.
-3. `spawn`: when the score reaches `s.nextBossScore` it creates the boss, stops normal spawning and emits `bossWarn`.
+1. `s.events = []`; advance `s.t`; set `s.scroll` with `Play.scrollAt` (eases from the speed the level started at, `s.scroll0`,
+   to the difficulty's speed over 0.75 s); add to `s.scrolled`. The backdrop's travel is `s.base + s.scrolled`.
+2. `steerAndFire`: `Player.steer` eases the velocity toward the held direction, clamped to the scout's area and the camera.
+   `Player.tryFire` allows at most 6 shots a second, from the nose, and not while the gun is jammed; `Player.spend` then
+   heats the gun and spends a round. Events: `fire`, `rocketFire`, `overheat`. (During the fly-in, and once the level is
+   complete, this step does the `intro` or the `exit` instead.)
+3. `spawn`: when the score reaches `CFG.boss.scoreAt` (once) it creates the boss, stops normal spawning and emits `bossWarn`.
    Otherwise it starts a moon every 60 s; while `s.t >= s.nextSpawn`, calls `Spawner.next` then `Objects.fromSpawn`.
    Event: `cometWarn`.
 4. `move`: records `px, py` (the position before the step) on objects and bolts, then moves everything. A comet sits
@@ -90,16 +92,16 @@ The best score is kept per level: `BestScore.load(id)` / `save(best, id)`; level
      destroy a rock outright.
    - Pickups and enemy bolts are skipped here.
    - `boltsAgainstBoss`: each bolt that hits costs the boss 1 hp (`bossHit`). At 0, `defeatBoss` scores
-     `CFG.boss.points`, bursts it into debris, schedules the next boss 2000 points on and resumes spawning after 2 s
-     (`bossDeath`).
+     `CFG.boss.points`, bursts it into debris and completes the level (`bossDeath`; see Levels).
 6. `objectsAgainstScout`: `Collide.hitsScout` (two circles, smaller than the sprite) plus `Player.hit` (one shield,
    1.5 s invulnerable and blinking, 8 px knockback). A rock that hits breaks. The third hit ends the run (`endRun`
    bursts the scout into debris). Events: `shieldHit`, `gameOver`. An enemy bolt that hits is spent and costs a
    shield. A pickup that touches the scout is collected instead (`collectPickup`, event `pickup`).
-7. `sweep` removes spent and gone things. Then `score = floor(scrolled / 10) + rockPoints`, frozen after game over.
+7. `sweep` removes spent and gone things. Then `score = floor(scrolled / 15) + rockPoints` (`Play.scoreOf`), frozen after game over or once the level is complete.
 
 `flow.js` maps events to sounds with `EVENT_SOUND`. The pilot's face comes from `s.happyUntil` / `s.wowUntil`
-(`Draw.pilot`); for the first 0.5 s it is still looking back at the planet, as the film ends.
+(`Draw.pilot`). When a run follows the film's frame (`Play.create` without `flyIn`, which the game itself no longer does) it
+still looks back at the planet for the first 0.5 s; the level select's marker does the same for the film's hand-over.
 
 **Why swept collisions:** a bolt moves 6 px a step and a fast rock up to 6 px the other way, so they close by up to
 12 px, more than a small rock's hit width. End-of-step tests let up to 40% of shots pass through small rocks late in
@@ -145,8 +147,8 @@ x -40 minus their radius. Comets go only when the whole 110 px tail has left, so
 ## Difficulty and spawning
 
 `Spawner.difficulty(t)` over a 120 s ramp, then held:
-- scroll speed 150 to 300 px/s (ease in-out);
-- spawn interval 1.2 to 0.45 s (linear);
+- scroll speed 225 to 450 px/s (ease in-out; `150 * VIEW_K` to `300 * VIEW_K`);
+- spawn interval 0.8 to 0.3 s (linear; `1.2 / VIEW_K` to `0.45 / VIEW_K`);
 - the mix: ice from 15 s, reaching a 0.3 share, comets from 30 s, reaching 0.1, and pickups from the start,
   reaching 0.4; rocks take the rest.
 
@@ -236,6 +238,9 @@ Change one, change the other:
 | `ENGINE_IDLE`, `ENGINE_FULL` in `audio.js` | the `ENGINE` keys in `src/score.js` | the engine's range |
 | `PILOT_CARD` in `flow.js` (14.6 s, 1.4 s long) | the `pilot` shot (14.5-16.0) and `gulp` cue | the card's loop |
 | `CFG.seam.startScroll` 18, `throttleFrom` 0.35 | `HOME_SPEED`, the final throttle in `sceneSunlight` | seam continuity |
+| `CFG.view.from` (320x180) and `to` (480x270) | `RES` in `src/shots-journey.js`, `VIEW_K` | the first camera is the film's grid; the field is `VIEW_K` times it |
+| `CFG.intro.to`, `intro.y` (192, 145) | `SHIP` (112, 100) plus the film frame's offset in the field (80, 45) | the first level's row and the scout's start spot are the film's scout |
+| `MENU_X`, `MENU_Y0` in `backdrop.js` | `SEAM_START`, `SHIP` | the select's marker starts exactly on the film's scout |
 | `Draw.pilot` look-back face | the pilot's last face in `sceneSunlight` | seam continuity |
 | `Hud.play` score box geometry | `hudRange` in `src/shots-journey.js` | the HUD sits where the film's sat |
 
@@ -250,4 +255,8 @@ Change one, change the other:
 - Rock and ice spin (`R.n(1.5)`, `R.n(1)` in `spawner.js`) are numbers outside `config.js`.
 - The log box changes size at the seam: the film's 26-glyph box becomes an 18-glyph box.
 - `Boss.step` and `Boss.volley` are tested, but the boss's draw and HUD bar are only checked by eye.
+- `Play.create` without `flyIn` (the film's frame as the first camera) is used only by tests and the smoke test's seam check; the
+  game starts every run with the fly-in.
+- The game-over card offers only a retry of level 1, not a way back to the level select.
+- The level select's list and prompts are checked by eye (screenshots), not by pixel tests.
 - M on the title mutes instead of starting, and there is no mute indicator.

@@ -88,8 +88,8 @@ title --any key (sounds ready)--> film --LOOP_T reached / Enter / Esc twice--> s
 - **film**: `Sound.start()` and `Sound.playFilm()` set `Flow.filmAt` on the audio clock. Each frame
   `fallBackIfSilent` runs first: an AudioContext the browser keeps suspended gets `CFG.audioGrace` seconds, then the
   film restarts silently on the wall clock. `renderFrame` runs only when the frame index changes.
-- **play**: `startRun` creates the run (`Play.create(seed, SEAM_START)`), starts the music on the film's bar line and
-  the engine. Each frame: `Play.catchUp` turns the time since the last frame into fixed steps (`CFG.step` = 1/60 s,
+- **play**: `startRun` creates the run (`Play.create` with `flyIn`, carrying on the select's stars and scout when it came
+  from the select), starts the music if it is not already playing and the engine. Each frame: `Play.catchUp` turns the time since the last frame into fixed steps (`CFG.step` = 1/60 s,
   at most `CFG.maxCatchUp` = 0.25 s of catch-up after a stall). Each step runs
   `Play.step(run, Input.steer(), step)` and plays the sound for each event. Then `Sound.engineSet(Play.engineAt(run))`
   and `Draw.frame`, timed into `Flow.frameMs`. One second after game over (`CFG.gameOver.card`), `endRun` saves the
@@ -107,7 +107,9 @@ title --any key (sounds ready)--> film --LOOP_T reached / Enter / Esc twice--> s
 
 ## The seam: film to game
 
-The game's first frame is the film's last: the smoke test measures a mean difference of 0.04 out of 255 outside
+The level select's first frame after the film is the film's last, with the scout drawn as its marker (`Flow.menuState`,
+`Draw.menu`): the smoke test measures it, and `Draw.frame` of a run that follows the film (`Play.create` without `flyIn`),
+at a mean difference of 0.04 out of 255 outside a mean difference of 0.04 out of 255 outside
 the HUD rows. The values that make this work live in `game/src/backdrop.js`:
 
 | value | what it carries over |

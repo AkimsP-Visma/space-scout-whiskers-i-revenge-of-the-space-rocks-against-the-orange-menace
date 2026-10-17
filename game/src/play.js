@@ -1,6 +1,6 @@
 // =====================================================================
-//  PLAY - one run of the belt as plain state, advanced in fixed steps: the seam's throttle-up, spawning, movement,
-//  bolts against objects, objects against the scout, the score. Each step lists what happened in s.events, for the
+//  PLAY - one run of a level as plain state, advanced in fixed steps: the start (the scout's fly-in, the throttle-up),
+//  spawning, movement, bolts against objects, objects against the scout, the boss, the exit, the score. Each step lists what happened in s.events, for the
 //  sounds and the pilot's face. Never draws.
 //  Events: 'fire', 'rocketFire', 'pickup', 'rockHit', 'rockBreak', 'iceClank', 'cometWarn', 'cometGo',
 //          'shieldHit', 'gameOver', 'overheat', 'bossWarn', 'bossShot', 'bossHit', 'bossDeath', 'levelExit'.

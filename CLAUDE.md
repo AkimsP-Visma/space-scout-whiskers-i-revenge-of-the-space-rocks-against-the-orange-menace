@@ -9,8 +9,9 @@ are changing before reading the code.
 Two things built from one source:
 - **The film**: 28 s of 16:9 pixel art. Scout 07, a small white ship with an orange tabby pilot, cruises through an
   asteroid belt to a ringed planet, threads the gap in its rings, bursts into sunlight and flies home.
-- **The game**: starts from the film's exact last frame and keeps flying into an endless belt: shoot brown rocks,
-  dodge grey ice and comets, three shields.
+- **The game**: after the film, a level select (the film's last frame eases out into it) and then level 1: shoot brown
+  rocks, dodge grey ice and comets, three shields, pickups, a gun that overheats, and the Warden at score 2000. Beating it
+  ends the level. A second level is listed but locked.
 
 Everything is code: no image or audio files (the only image is the README screenshot in `docs/images/`). The film is
 made with the **animate** plugin for Claude Code (pixel style); the game reuses the film's drawing code directly.
@@ -76,7 +77,7 @@ node $ANIM/tools/review.mjs .                         # checks + contact sheets 
    top-level name a clear, unique name.
 7. **No URLs and no `data:` URIs** in any source file, comments included; both builds refuse them.
 8. **Game structure:** every tunable number goes in `game/src/config.js`. The logic files (collide, spawner, objects,
-   player, play, input, best-score) never draw; draw, hud and backdrop never change state. Write the test first.
+   player, view, boss, play, input, best-score) never draw; draw, hud and backdrop never change state. Write the test first.
 9. **`game/vendor/` is a copy of the animate kit** (MIT). Do not edit it except to re-sync; its two changes are listed
    in `game/vendor/README.md`. To change kit behaviour, write a new function under a new name in `src/` or `game/src/`.
 10. **Some game values are hand-copied from the film** and must change together: see "Couplings" in `docs/game.md`.

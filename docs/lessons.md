@@ -5,6 +5,15 @@ fixed it. `LOG.md` has the film's production history in more detail.
 
 ## Design decisions and why
 
+- **The game's field is 1.5x the film's grid, with the same sprites** (`VIEW_K`), after "too claustrophobic". Only sizes in
+  grid pixels changed; speeds and spawn intervals scale with `VIEW_K` so a run plays as before. The camera starts on the film's
+  frame and pulls back, because a cut to a smaller-looking world would pop.
+- **One boss ends the level; the level select follows the film.** The select is a live scene (stars flying past, the scout as
+  the marker), not a held frame, so it eases out of the film's last frame and a level starts from wherever the stars and the
+  scout are. Nothing in it can hurt the scout.
+- **Every weapon heats the gun; pickup weapons are limited by shots, not time.** Holding the trigger was free; a heat bar
+  that jams the gun at full heat is the cost. Taking the weapon you already hold adds to its ammo, a different one replaces it.
+
 - **The journey is one continuous shot on a world clock.** The first cut used the plugin's F5 format (accelerating
   hard cuts, each shot its own little world). The user rejected it: rocks appeared fully on screen and vanished at
   the next cut, so it looked stitched together. Now every object has a position in one world (`distTable`, `worldX`)
@@ -135,6 +144,11 @@ a feature.
 - **Self-review images before showing the user.** Most of the look problems above were caught that way.
 
 ## Quirks of this machine
+
+- **The unit tests do not rebuild `game/index.html`.** After a code change run `node game/build.mjs` (the smoke test does
+  it for you) before opening the page, or you test the old build.
+- **Playwright may not be global** on a given machine: if `npm root -g` has no `playwright`, point `NODE_PATH` at a folder that
+  does (an npx cache works); the smoke test tries a plain `require` first.
 
 - **Bash's working directory resets** to `C:\WINDOWS\System32` after every call. Use `cd /c/Users/... && ...` in the
   same command, or absolute paths.

@@ -1,6 +1,6 @@
 // =====================================================================
-//  CONFIG - every tunable number of the scout run. Positions and sizes are low-res pixels (the 320x180 grid the film
-//  draws on), times are seconds, speeds are pixels per second.
+//  CONFIG - every tunable number of the scout run. Positions and sizes are low-res pixels of the play field (480x270,
+//  the film's 320x180 grid times VIEW_K), times are seconds, speeds are pixels per second.
 // =====================================================================
 // The play field is VIEW_K times the film's 320x180 grid in each direction (480x270), drawn with the same sprites, so
 // everything in it is smaller on screen and there is more room. Distances and speeds that were tuned on the film's
