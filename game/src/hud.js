@@ -75,8 +75,8 @@ const Hud = {
       pixBox(x, MENU_Y0 + i * M.rowGap - 6, w, 13, { bg: Q.ink, edge: on ? Q.orange : Q.slate });
       pixText(rows[i], x + 4, MENU_Y0 + i * M.rowGap - 3, L.locked ? Q.slate : on ? Q.white : Q.ice);
     });
-    if (notice) pixText('NOT READY YET', x + w / 2, last + 20, Q.red, { align: 'center', shadow: Q.ink });
-    else if (Hud.blinkOn(t)) pixText('FIRE OR ENTER TO START', x + w / 2, last + 20, Q.white, { align: 'center', shadow: Q.ink });
+    if (notice) pixText('NOT READY YET', PIX.w / 2, last + 20, Q.red, { align: 'center', shadow: Q.ink });   // centred on the screen, not the list
+    else if (Hud.blinkOn(t)) pixText('FIRE OR ENTER TO START', PIX.w / 2, last + 20, Q.white, { align: 'center', shadow: Q.ink });
   },
   error(message) {
     const text = String(message).toUpperCase().slice(0, 2 * ERROR_LINE);
