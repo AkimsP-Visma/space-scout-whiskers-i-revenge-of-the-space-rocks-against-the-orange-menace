@@ -3,16 +3,18 @@
 //  bolts against objects, objects against the scout, the score. Each step lists what happened in s.events, for the
 //  sounds and the pilot's face. Never draws.
 //  Events: 'fire', 'rocketFire', 'pickup', 'rockHit', 'rockBreak', 'iceClank', 'cometWarn', 'cometGo',
-//          'shieldHit', 'gameOver', 'overheat', 'bossWarn', 'bossShot', 'bossHit', 'bossDeath'.
+//          'shieldHit', 'gameOver', 'overheat', 'bossWarn', 'bossShot', 'bossHit', 'bossDeath', 'levelExit'.
 // =====================================================================
 const Play = {
-  create(seed, start) {
+  // start: where the scout is; opts.flyIn starts a level on the whole field with the scout flying in from the left
+  create(seed, start, opts = {}) {
     return {
       seed, t: 0, scroll: CFG.seam.startScroll, scrolled: 0, rockPoints: 0, score: 0, fired: 0,
       spawnN: 0, nextSpawn: CFG.seam.firstSpawn, nextMoon: CFG.moon.every, moonFrom: null, nextId: 0,
-      player: Player.create(start.x, start.y), objects: [], bolts: [], debris: [], events: [],
+      full: !!opts.flyIn, flyIn: !!opts.flyIn, introDone: false, complete: false, completeAt: null, exiting: false, exited: false,
+      player: Player.create(opts.flyIn ? CFG.intro.from : start.x, opts.flyIn ? CFG.intro.y : start.y), objects: [], bolts: [], debris: [], events: [],
       over: false, overAt: null, happyUntil: -1, wowUntil: -1,
-      boss: null, bossesBeaten: 0, nextBossScore: CFG.boss.scoreAt,
+      boss: null, bossDone: false,
     };
   },
   // the seam eases the world and the engine from the film's slow cruise up to the belt
@@ -33,6 +35,7 @@ const Play = {
   },
   step(s, input, dt) {
     s.events = [];
+    const frozen = s.over || s.complete;   // the score stops when the run ends or the level is complete
     s.t += dt;
     s.scroll = Play.scrollAt(s.t);
     s.scrolled += s.scroll * dt;
@@ -44,11 +47,14 @@ const Play = {
     Play.boltsAgainstBoss(s);
     Play.objectsAgainstScout(s);
     Play.sweep(s);
-    if (!s.over) s.score = Math.floor(s.scrolled / CFG.score.pxPerPoint) + s.rockPoints;
+    if (!frozen) s.score = Play.scoreOf(s);
   },
+  scoreOf(s) { return Math.floor(s.scrolled / CFG.score.pxPerPoint) + s.rockPoints; },
   steerAndFire(s, input, dt) {
     if (s.over) return;
-    Player.steer(s.player, input, dt, View.bounds(View.at(s.t)));
+    if (s.complete) return Play.exit(s, dt);
+    if (s.flyIn && !s.introDone) return Play.intro(s);
+    Player.steer(s.player, input, dt, View.bounds(View.of(s)));
     const w = s.player.weapon, at = Player.tryFire(s.player, input.fire, dt);
     if (!at) return;
     if (w === 'spread') {
@@ -66,13 +72,24 @@ const Play = {
     s.fired++;
     if (Player.spend(s.player)) s.events.push('overheat');
   },
+  // the level's start when it does not follow the film: the scout glides in and slows to its spot; no steering yet
+  intro(s) {
+    const I = CFG.intro, p = s.player;
+    p.x = lerp(I.from, I.to, EZ.o3(s.t / I.dur)); p.y = I.y; p.vx = 0; p.vy = 0;
+    if (s.t >= I.dur) s.introDone = true;
+  },
+  // level complete: the scout hovers while the boss's debris clears, then accelerates off the right edge
+  exit(s, dt) {
+    const p = s.player, E = CFG.exit;
+    if (s.t - s.completeAt < E.delay) { Player.steer(p, { x: 0, y: 0 }, dt, View.bounds(View.of(s))); return; }
+    if (!s.exiting) { s.exiting = true; s.events.push('levelExit'); }
+    p.vx += E.accel * dt; p.vy *= 1 - Math.min(1, 6 * dt);
+    p.x += p.vx * dt; p.y += p.vy * dt;
+    if (p.x > E.offX) s.exited = true;
+  },
   spawn(s) {
-    if (!s.boss && s.score >= s.nextBossScore) {
-      const bossNum = s.bossesBeaten + 1;
-      s.boss = Boss.create(CFG.boss.hp + (bossNum - 1) * CFG.boss.hpStep, s.seed, bossNum);
-      s.nextSpawn = Infinity; s.events.push('bossWarn'); return;
-    }
-    if (s.boss) return;
+    if (!s.boss && !s.bossDone && !s.complete && s.score >= CFG.boss.scoreAt) { Play.forceBoss(s); return; }
+    if (s.boss || s.complete) return;
     if (s.t >= s.nextMoon) { s.moonFrom = s.scrolled; s.nextMoon += CFG.moon.every; }
     while (s.t >= s.nextSpawn) {
       const sp = Spawner.next(s.seed, s.spawnN++, s.t);
@@ -80,6 +97,10 @@ const Play = {
       if (sp.kind === 'comet') s.events.push('cometWarn');
       s.nextSpawn += Spawner.difficulty(s.t).interval;
     }
+  },
+  forceBoss(s) {
+    s.boss = Boss.create(CFG.boss.hp, s.seed, 1);
+    s.nextSpawn = Infinity; s.events.push('bossWarn');
   },
   moveBoss(s, dt) {
     if (!s.boss) return;
@@ -99,8 +120,9 @@ const Play = {
     s.rockPoints += CFG.boss.points;
     s.debris.push(...Objects.debris(b.x, b.y, CFG.boss.debrisCount, 'rock', 'boss' + s.seed));
     s.debris.push(...Objects.debris(b.x, b.y, CFG.boss.sparkCount, 'spark', 'bossS' + s.seed));
-    s.boss = null; s.bossesBeaten++; s.nextBossScore = s.score + CFG.boss.every;
-    s.nextSpawn = s.t + 2;
+    s.boss = null; s.bossDone = true; s.complete = true; s.completeAt = s.t;
+    s.nextSpawn = Infinity;
+    s.objects = s.objects.filter((o) => o.kind !== 'enemyBolt');
     s.happyUntil = s.t + 1; s.wowUntil = s.t + 1;
     s.events.push('bossDeath');
   },
@@ -139,7 +161,7 @@ const Play = {
     }
   },
   objectsAgainstScout(s) {
-    if (s.over) return;
+    if (s.over || s.complete) return;
     for (const o of s.objects) {
       if (o.spent) continue;
       if (o.kind === 'pickup' && Collide.hitsScout(s.player, o)) { o.spent = true; Play.collectPickup(s, o.role); continue; }

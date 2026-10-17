@@ -27,6 +27,9 @@ const CFG = {
   goneX: -40,
   difficulty: { ramp: 120, scroll: [150 * VIEW_K, 300 * VIEW_K], interval: [1.2 / VIEW_K, 0.45 / VIEW_K], iceFrom: 15, cometFrom: 30, ice: 0.3, comet: 0.1 },
   hud: { heatW: 40, heatWarn: 0.7 },   // the heat bar's width, and the heat above which it turns red
+  levels: [{ id: 1, name: 'THE BELT' }],
+  exit: { delay: 1.6, accel: 420, offX: 540 },    // level complete: the scout hovers for delay s, then accelerates off the right edge (offX is where it counts as gone)
+  intro: { from: -40, to: 110, y: 135, dur: 1.4 },   // a level that does not follow the film: the scout flies in from the left
   score: { pxPerPoint: 10 * VIEW_K, digits: 6, storageKey: 'scout-ring:best' },
   moon: { every: 60, r: 40, top: 260, depth: 0.6, enterX: 520 },
   gameOver: { scoutDebris: 24, burstLife: 0.8, card: 1.0, retryLockout: 0.6 },   // a fire tap right as the card shows does not skip it
@@ -38,8 +41,8 @@ const CFG = {
   rocket: { speed: 200 * VIEW_K, r: 4, length: 7, debrisCount: 12, sparkCount: 6 },
   spread: { vy: 14 * VIEW_K },
   boss: {
-    scoreAt: 1000, every: 2000,   // the first boss comes at scoreAt, the next ones every `every` points after the last was beaten
-    hp: 100, hpStep: 50, r: 14, startY: 135, firstFire: 1.5, shotR: 2,
+    scoreAt: 2000,   // the one boss of the level comes at this score; beating it completes the level
+    hp: 100, r: 14, startY: 135, firstFire: 1.5, shotR: 2,
     enterX: 390, enterSpeed: 90 * VIEW_K,
     trackSpeed: 65 * VIEW_K, trackEase: 4,
     // once in, it flies one move at a time, each picked at random (never the same twice running): track the scout,

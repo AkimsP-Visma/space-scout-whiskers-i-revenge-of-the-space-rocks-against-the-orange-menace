@@ -4,11 +4,13 @@
 //  the rectangle (ox, oy, w, h) of them. Pure numbers; never draws.
 // =====================================================================
 const View = {
-  at(t) {
-    const V = CFG.view, u = EZ.io(seg(t, V.delay, V.delay + V.dur));
+  // full: a level that does not follow the film starts on the whole field
+  at(t, full = false) {
+    const V = CFG.view, u = full ? 1 : EZ.io(seg(t, V.delay, V.delay + V.dur));
     const w = Math.round(lerp(V.from[0], V.to[0], u)), h = Math.round(lerp(V.from[1], V.to[1], u));
     return { u, w, h, ox: (V.to[0] - w) / 2, oy: (V.to[1] - h) / 2 };
   },
+  of(s) { return View.at(s.t, s.full); },
   // the scout's area: the field's limits, and never outside what the camera shows
   bounds(v) {
     const S = CFG.scout;

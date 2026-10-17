@@ -47,25 +47,61 @@ test('phase 2 triggers at half hp and fires more shots', () => {
   const shots = s.objects.filter((o) => o.kind === 'enemyBolt').length;
   assert.ok(shots >= CFG.boss.shots[0]);
 });
+const beatBoss = (s) => {
+  s.rockPoints = CFG.boss.scoreAt; run(s, idle, 2);
+  s.boss.x = CFG.boss.enterX;
+  for (let i = 0; i < CFG.boss.hp; i++) { s.bolts.push(O.bolt(s.boss.x, s.boss.y)); run(s); }
+};
 test('boss is defeated after CFG.boss.hp hits and gives bonus points', () => {
   const s = quiet();
-  s.rockPoints = CFG.boss.scoreAt; run(s, idle, 2);
-  s.boss.x = CFG.boss.enterX;
-  for (let i = 0; i < CFG.boss.hp; i++) {
-    s.bolts.push(O.bolt(s.boss.x, s.boss.y)); run(s);
-  }
-  assert.equal(s.boss, null); assert.equal(s.bossesBeaten, 1); assert.ok(s.nextBossScore > CFG.boss.scoreAt + CFG.boss.every - 1);
-  assert.ok(s.rockPoints >= 1000 + CFG.boss.points);
+  beatBoss(s);
+  assert.equal(s.boss, null); assert.equal(s.bossDone, true);
+  assert.ok(s.rockPoints >= CFG.boss.scoreAt + CFG.boss.points);
   assert.ok(s.debris.length > 0);
 });
-test('after defeat, spawning resumes after 2s', () => {
+test('there is only one boss: beating it completes the level and nothing spawns after', () => {
+  const s = Play.create(1, START);
+  beatBoss(s);
+  assert.equal(s.complete, true); assert.equal(s.nextSpawn, Infinity);
+  const before = s.objects.length;
+  run(s, idle, 60 * 60);
+  assert.equal(s.boss, null); assert.ok(s.objects.length <= before);   // no new boss, no new rocks
+  s.rockPoints += 5000; run(s, idle, 5); assert.equal(s.boss, null);
+});
+test('level complete: enemy bolts vanish, nothing can hurt the scout, the score stops', () => {
   const s = quiet();
   s.rockPoints = CFG.boss.scoreAt; run(s, idle, 2);
-  s.boss.x = CFG.boss.enterX;
-  for (let i = 0; i < CFG.boss.hp; i++) {
-    s.bolts.push(O.bolt(s.boss.x, s.boss.y)); run(s);
-  }
-  assert.ok(isFinite(s.nextSpawn)); assert.ok(s.nextSpawn > s.t);
+  s.objects.push({ kind: 'enemyBolt', x: 500, y: 100, r: 2, vx: -100, vy: 0, angle: 0, spin: 0 });
+  s.boss.hp = 1; s.boss.x = CFG.boss.enterX; s.bolts.push(O.bolt(s.boss.x, s.boss.y)); run(s);
+  assert.equal(s.complete, true); assert.ok(!s.objects.some((o) => o.kind === 'enemyBolt'));
+  const score = s.score; s.objects.push(O.rock('large', s.player.x, s.player.y, 9, 0, 0, 0, 'x'));
+  run(s, idle, 30);
+  assert.equal(s.player.shields, CFG.scout.shields); assert.equal(s.score, score);
+  assert.ok(score >= CFG.boss.scoreAt + CFG.boss.points, 'the boss points still count');
+});
+test('level complete: the scout hovers, then flies off the right edge and the level is exited', () => {
+  const s = quiet();
+  s.rockPoints = CFG.boss.scoreAt; run(s, idle, 2); s.boss.hp = 1; s.boss.x = CFG.boss.enterX; s.bolts.push(O.bolt(s.boss.x, s.boss.y)); run(s);
+  assert.equal(s.complete, true);
+  run(s, { x: -1, y: 1, fire: true }, 60);   // keys are ignored: still hovering, not fired, not exiting
+  assert.equal(s.exiting, false); assert.ok(s.player.x > 100); assert.equal(s.bolts.filter((b) => !b.spent).length, 0);
+  let exitEvents = 0, last = s.player.x;
+  for (let i = 0; i < 60 * 8 && !s.exited; i++) { run(s); if (s.events.includes('levelExit')) exitEvents++; assert.ok(s.player.x >= last - 1e-9 || !s.exiting); last = s.player.x; }
+  assert.equal(exitEvents, 1); assert.equal(s.exited, true); assert.ok(s.player.x > CFG.exit.offX);
+});
+test('a level that starts on its own: the scout flies in from the left on the whole field, then steers', () => {
+  const s = Play.create(1, START, { flyIn: true }); s.nextSpawn = Infinity;
+  assert.ok(s.player.x < 0);
+  run(s, { x: 0, y: -1, fire: true }, 30);
+  assert.equal(s.fired, 0); assert.equal(s.player.y, CFG.intro.y);   // no steering or firing yet
+  run(s, idle, 60);
+  assert.ok(Math.abs(s.player.x - CFG.intro.to) < 1e-6);
+  run(s, { x: 0, y: -1, fire: false }, 30); assert.ok(s.player.y < CFG.intro.y);
+  assert.deepEqual([$('View').of(s).w, $('View').of(s).h], [480, 270]);
+});
+test('a run that follows the film starts on its frame and the camera pulls back', () => {
+  const s = Play.create(1, START);
+  assert.deepEqual([$('View').of(s).w, $('View').of(s).h], [320, 180]);
 });
 test('normal spawning is suspended while boss is alive', () => {
   const s = Play.create(1, START);

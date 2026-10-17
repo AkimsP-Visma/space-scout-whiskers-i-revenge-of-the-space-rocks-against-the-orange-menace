@@ -9,15 +9,15 @@
 | `spawner.js` | difficulty over time, the next spawn | `Spawner.difficulty(t)`, `Spawner.next(seed, n, t)` |
 | `objects.js` | rocks, ice, comets, bolts, debris as plain records | `Objects.fromSpawn`, `rock`, `bolt`, `rocketBolt`, `debris`, `move`, `isGone`, `hitRock` |
 | `player.js` | the scout's steering, firing, shields | `Player.create`, `steer`, `tryFire`, `hit`, `isBlinkedOut` |
-| `view.js` | the camera over the play field | `View.at(t)`, `View.bounds(v)` |
+| `view.js` | the camera over the play field | `View.at(t, full)`, `View.of(s)`, `View.bounds(v)` |
 | `boss.js` | the Drift Warden: entry, tracking, volleys | `Boss.create`, `entered`, `step`, `volley` |
-| `play.js` | one run, advanced in fixed steps | `Play.create`, `step`, `collectPickup`, `defeatBoss`, `scrollAt`, `throttleAt`, `engineAt`, `catchUp`, `forceHit` |
+| `play.js` | one run, advanced in fixed steps | `Play.create`, `step`, `collectPickup`, `forceBoss`, `defeatBoss`, `intro`, `exit`, `scoreOf`, `scrollAt`, `throttleAt`, `engineAt`, `catchUp`, `forceHit` |
 | `input.js` | held keys and one-shot presses | `KEY_MAP`, `Input.steer()`, `takePressed()`, `is(code, name)`, `attach(target)` |
-| `best-score.js` | the best score in localStorage | `BestScore.load()`, `save(best)` |
+| `best-score.js` | each level's best score in localStorage | `BestScore.load(level)`, `save(best, level)` |
 | `audio.js` | all sound | `Sound`, `SFX`, `GROOVE`, `musicLoop`, `clipVoices`, `renderClip` |
 | `backdrop.js` | the seam values, the fast nebula, scenery | `FILM_END_TT`, `FILM_END_DIST`, `SEAM_START`, `NebulaField`, `Backdrop.draw(s)` |
-| `hud.js` | screen-fixed UI | `Hud.play`, `title`, `paused`, `card`, `error`, `overlay`, `box` |
-| `draw.js` | one frame of play | `Draw.frame(canvas, s)`, `Draw.objects`, `Draw.scout`, `Draw.pilot`, `PostOverlay` |
+| `hud.js` | screen-fixed UI | `Hud.play`, `title`, `paused`, `card`, `levelComplete`, `select`, `error`, `overlay`, `box` |
+| `draw.js` | one frame of play | `Draw.frame(canvas, s)`, `Draw.menu(canvas, s, screen)`, `Draw.objects`, `Draw.scout`, `Draw.pilot`, `PostOverlay` |
 | `flow.js` | states, loop, keys, boot, test hooks | `Flow`, `EVENT_SOUND`, `PILOT_CARD` |
 
 Logic files never draw, and drawing files never change state.
@@ -41,6 +41,27 @@ Drawing notes: the backdrop draws in camera pixels (the nebula computes only the
 tiled with `wideStars`), the film's `rock`, `comet` and `moonBody` clamp to `PIX.w` x `PIX.h` rather than a fixed
 320x180, the HUD sits against `PIX.w`, and `PostOverlay.drawAt` keeps the vignette fixed and puts the scanlines on the
 current pixel rows.
+
+## Levels
+
+A level is the belt run up to its boss. Level 1 (`CFG.levels`: `{ id, name }`) is the only one so far. The flow is:
+
+1. **Start.** The first run after the film starts on the film's last frame (the seam, with the camera pulling back). Every
+   other start (a retry, or a level chosen from the list) is `Play.create(seed, start, { flyIn: true })`: the whole
+   field from the first frame (`s.full`, so `View.of(s)`), the scout gliding in from the left to `CFG.intro.to` while steering
+   and firing are ignored (`Play.intro`, `CFG.intro.dur`).
+2. **Beat the boss.** `defeatBoss` sets `s.complete`: enemy bolts are removed, nothing can hurt the scout or be picked up,
+   nothing spawns, the score stops (it still includes the boss's points), and keys are ignored.
+3. **Exit.** The scout hovers for `CFG.exit.delay` while the debris clears, then accelerates (`CFG.exit.accel`) off the right
+   edge (event `levelExit`, `s.exiting`) until it passes `CFG.exit.offX` (`s.exited`).
+4. **Level complete card** (`Flow.complete`): `LEVEL COMPLETE`, the score and the best (saved per level), over the belt's
+   backdrop scrolling on from where the run stopped (`Draw.menu`, `Flow.menuState`). Fire or Enter, after the lockout, continues.
+5. **Level select** (`Flow.select`): one row per level with its best, `>` on the chosen one (up and down move it, fire or
+   Enter starts it). With one level the list has one row.
+6. **Game over** is unchanged; its retry starts level 1 again with the fly-in.
+
+The best score is kept per level: `BestScore.load(id)` / `save(best, id)`; level 1 keeps the original storage key, level n adds
+`:n`. To add a level: an entry in `CFG.levels`, then whatever makes it differ (the spawner and the boss are level 1's only for now).
 
 ## One step of play (`Play.step(s, input, dt)`)
 
@@ -104,14 +125,13 @@ x -40 minus their radius. Comets go only when the whole 110 px tail has left, so
   with the default gun and 1.6 s with a pickup weapon; a jam lasts about 2.9 s. The shot that jams the gun still
   fires and still spends its round.
   `shield` restores one pip up to the maximum.
-- **The boss** (`boss.js`, numbers in `CFG.boss`) appears at score 1000 (`scoreAt`), then 2000 points after each boss is beaten (`every`), with `hp` 100 plus 50 per earlier
-  boss. It enters from the right to `enterX` (tracking the scout's y on the way), then flies one **move** at a time, each
-  lasting 3 to 5 s and picked at random, never the same twice running (`RNG('bossMove', seed, bossNum, n)`, so a seed gives
+- **The boss** (`boss.js`, numbers in `CFG.boss`) appears once, at score 2000 (`scoreAt`), with `hp` 100. It enters from the right to `enterX` (tracking the scout's y on the way), then flies one **move** at a time, each
+  lasting 3 to 5 s and picked at random, never the same twice running (`RNG('bossMove', seed, 1, n)`, so a seed gives
   the same fight): `track` (follow the scout's y), `sweep` (a sine across the scout's whole height), `dash` (to a random
   spot in its x range and the whole height, a new spot every 1.2 s) and `weave` (a loop across x and y). It fires volleys
   of 1 to 3 bolts seeded by `RNG('bossShot', n)` from wherever it is. Its y span is the scout's whole area
   (`Boss.span()`) and its x stays in `CFG.boss.moves.xRange`. Below `phaseAt` (half) of its hp it is in phase 2: it moves
-  1.6x faster, picks moves 30% shorter, fires faster, and the HUD bar and sprite turn red. Normal spawning is suspended while it lives. Events: `bossWarn`, `bossShot`, `bossHit`,
+  1.6x faster, picks moves 30% shorter, fires faster, and the HUD bar and sprite turn red. Normal spawning is suspended while it lives, and beating it completes the level (below). Events: `bossWarn`, `bossShot`, `bossHit`,
   `bossDeath`.
 
 ## Difficulty and spawning
@@ -159,11 +179,11 @@ error card. Rows are in `HUD_ROW`. HUD helpers that run inside a world pass go t
 
 ## Tests
 
-- **Unit** (`node --test game/test/*.test.mjs`, 74 tests): `game/test/load.mjs` loads `vendor/core.js` plus the named
+- **Unit** (`node --test game/test/*.test.mjs`, 79 tests): `game/test/load.mjs` loads `vendor/core.js` plus the named
   game files into one vm context, the way the page joins them. `$(expression)` reads a value out; `plain(value)` copies
   it into the test's realm, because `assert.deepStrictEqual` compares prototypes and the context has its own
   `Object`. Pass `globals` to stub things like `localStorage` or `console`.
-- **Smoke** (`node game/test/smoke.mjs`, 23 checks): rebuilds the page and runs headless Chromium with
+- **Smoke** (`node game/test/smoke.mjs`, 27 checks): rebuilds the page and runs headless Chromium with
   `--autoplay-policy=no-user-gesture-required`. It checks:
   - a key during LOADING is ignored;
   - the seam continuity diff, and the draw time of a busy frame;
@@ -176,7 +196,7 @@ error card. Rows are in `HUD_ROW`. HUD helpers that run inside a world pass go t
   Screenshots go to `game/test-output/`: look at them.
 - **Hooks**: `?test` exposes `window.GAME.state()` (state name, sound status, film time, run time, score, shields,
   position, bolts fired, objects, frame-time median and worst) and `window.GAME.hit()` (a hit even while
-  invulnerable). `?nosound` starts the page silent.
+  invulnerable) and `window.GAME.win()` (beats the level at once). `?nosound` starts the page silent.
 
 ## How to add things
 

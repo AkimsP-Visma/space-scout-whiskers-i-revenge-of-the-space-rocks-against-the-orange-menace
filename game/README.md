@@ -4,6 +4,7 @@ The scout-ring film flows straight into an endless belt game made from the film'
 dodge the grey ice and the comets.
 
 - **Play:** `node game/build.mjs`, then open `game/index.html` in a desktop browser. Press any key to start the film.
+- **A level:** shoot and dodge up to the boss at score 2000; beat it and the scout flies off, then the level select.
 - **Keys:** arrows or WASD steer, Space fires (hold it for auto-fire) and retries (Enter too), Enter skips the film (Esc twice also does),
   P or Esc pauses, M mutes.
 - **Tests:** `node --test game/test/*.test.mjs` (the logic) and `node game/test/smoke.mjs` (the page in headless

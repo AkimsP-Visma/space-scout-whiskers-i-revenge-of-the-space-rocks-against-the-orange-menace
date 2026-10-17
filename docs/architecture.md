@@ -80,6 +80,7 @@ never a camera. Scenes (`SCENE` in `src/head.html`): `sceneJourney`, `sceneWide`
 
 ```
 title --any key (sounds ready)--> film --LOOP_T reached / Enter / Esc twice--> play --3 hits, +1 s--> over --Space / Enter--> play
+                                                   --boss beaten, scout exits--> complete --Space / Enter--> select --Space / Enter--> play
 ```
 
 - **title**: `renderFrame(0)` is drawn once into `Flow.titleFrame`; each frame draws that plus `Hud.title`
@@ -95,6 +96,8 @@ title --any key (sounds ready)--> film --LOOP_T reached / Enter / Esc twice--> p
   best score.
 - **over**: `TT` loops through the film's pilot close-up (`PILOT_CARD`); `scenePilot()` is redrawn into a cached
   canvas only when `B` changes, with `Hud.card` over it. Space retries after `CFG.gameOver.retryLockout`.
+- **complete** and **select**: `Draw.menu` draws the belt's backdrop alone, scrolling on from where the run stopped, with
+  `Hud.levelComplete` or `Hud.select` over it (see `docs/game.md`, Levels).
 - **keys**: `Input.takePressed()` gives one-shot presses (key repeats do not count); held keys steer and fire.
   M mutes in every state; P or Esc pauses in play. A separate keydown listener calls `Sound.unlock()`, because strict
   browsers only start audio inside the key event itself.

@@ -55,6 +55,20 @@ const Hud = {
     Hud.box(['SCORE ' + pad(score), 'BEST  ' + pad(best)], HUD_ROW.cardScores);
     if (Hud.blinkOn(t)) pixText('FIRE OR ENTER TO RESTART', PIX.w / 2, HUD_ROW.cardPrompt, Q.white, { align: 'center', shadow: Q.ink });
   },
+  // the level complete card, over the belt's backdrop on the whole field
+  levelComplete(score, best, t) {
+    const pad = (n) => String(n).padStart(CFG.score.digits, '0');
+    Hud.box(['LEVEL COMPLETE'], Math.round(PIX.h * 0.22), { edge: Q.orange });
+    Hud.box(['SCORE ' + pad(score), 'BEST  ' + pad(best)], Math.round(PIX.h * 0.42));
+    if (Hud.blinkOn(t)) pixText('FIRE OR ENTER TO CONTINUE', PIX.w / 2, PIX.h - 28, Q.white, { align: 'center', shadow: Q.ink });
+  },
+  // the level select: one row a level, the chosen one marked; bests[i] is level i's best
+  select(levels, chosen, bests, t) {
+    const pad = (n) => String(n).padStart(CFG.score.digits, '0');
+    Hud.box(['SELECT LEVEL'], Math.round(PIX.h * 0.18), { edge: Q.orange });
+    levels.forEach((L, i) => Hud.box([(i === chosen ? '> ' : '  ') + L.id + '  ' + L.name + '   BEST ' + pad(bests[i])], Math.round(PIX.h * 0.38) + i * 22, { edge: i === chosen ? Q.orange : Q.slate }));
+    if (Hud.blinkOn(t)) pixText('FIRE OR ENTER TO START', PIX.w / 2, PIX.h - 28, Q.white, { align: 'center', shadow: Q.ink });
+  },
   error(message) {
     const text = String(message).toUpperCase().slice(0, 2 * ERROR_LINE);
     Hud.box(['SOMETHING BROKE', text.slice(0, ERROR_LINE), text.slice(ERROR_LINE)].filter(Boolean), HUD_ROW.errorY, { edge: Q.red });

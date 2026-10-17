@@ -160,6 +160,28 @@ async function walk(browser) {
   await q.page.keyboard.press('Escape');
   const silentPlay = await q.until((x) => x.name === 'play', 2000, 'play without sound');
   check(silentPlay.shields === 3, '?nosound: Esc skips into play');
+  // beat the level: the scout flies off, the level complete card, the level select, then the level starts again with a fly-in
+  await q.page.evaluate(() => window.GAME.win());
+  await q.page.waitForTimeout(1200);
+  const exiting = await q.state();
+  check(exiting.name === 'play' && exiting.shields === 3, 'beating the boss hands over to the exit, not the card, at once');
+  await q.page.waitForTimeout(1200);
+  await q.shot('6-exit');
+  const done = await q.until((x) => x.name === 'complete', 6000, 'the level complete card');
+  check(done.best > 0, `the level is complete: the card shows, the best is kept (${done.best})`);
+  await q.page.waitForTimeout(800);
+  await q.shot('7-level-complete');
+  await q.page.keyboard.press('Space');
+  await q.until((x) => x.name === 'select', 1000, 'the level select');
+  await q.page.waitForTimeout(800);
+  await q.shot('8-level-select');
+  await q.page.keyboard.press('Space');
+  const again = await q.until((x) => x.name === 'play', 1000, 'the level from the select');
+  check(again.t < 0.5 && again.x < 0 && again.level === 0, 'a level chosen from the list starts with the scout flying in from the left');
+  await q.page.waitForTimeout(1800);
+  const flown = await q.state();
+  check(Math.abs(flown.x - 110) < 2, `the scout has flown in to its spot (x ${flown.x.toFixed(0)})`);
+  await q.shot('9-fly-in');
   const blocked = await open(browser, '?test', BLOCKED_AUDIO);
   await blocked.until((x) => x.ready, 30000, 'the sounds to render');
   await blocked.page.keyboard.press('KeyX');

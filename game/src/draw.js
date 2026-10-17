@@ -69,12 +69,13 @@ const Draw = {
   // E0 (when tags and captions start) is the seam
   setClock(s) { TT = FILM_END_TT + s.t; B = Math.floor(TT * 12 + 1e-6); E0 = FILM_END_TT; },
   pilot(s) {
-    if (s.t < CFG.seam.lookBack) return { mood: 'happy', look: [-1, -0.4] };   // still looking back at the planet, as the film ends
+    if (s.complete) return { mood: 'happy', look: [1, 0] };
+    if (!s.full && s.t < CFG.seam.lookBack) return { mood: 'happy', look: [-1, -0.4] };   // still looking back at the planet, as the film ends
     if (s.t < s.wowUntil) return { mood: 'wow', look: [1, 0] };
     if (s.t < s.happyUntil) return { mood: 'happy', look: [1, 0] };
     return { mood: 'smile', look: [1, 0] };
   },
-  // field coordinates to the camera's: view is View.at(s.t)
+  // field coordinates to the camera's: view is View.of(s)
   objects(s, v) {
     for (const o of s.objects) {
       const x = Math.round(o.x - v.ox), y = Math.round(o.y - v.oy);
@@ -118,11 +119,23 @@ const Draw = {
     ctx = canvas.getContext('2d');
     Draw.setClock(s);
     DEFER = [];
-    const v = View.at(s.t);
+    const v = View.of(s);
     lowres([v.w, v.h], () => { Backdrop.draw(s); Draw.objects(s, v); Draw.boss(s, v); Draw.scout(s, v); Hud.play(s); }, { fx: { pal: PAL16 } });
     const queued = DEFER;
     DEFER = null;
     queued.forEach((f) => f());
     PostOverlay.drawAt(v.w);
+  },
+  // the belt's backdrop alone on the whole field, scrolling, with a screen drawn over it by screen(): the level complete card and the level select
+  menu(canvas, s, screen) {
+    ctx = canvas.getContext('2d');
+    Draw.setClock(s);
+    DEFER = [];
+    const [w, h] = CFG.view.to;
+    lowres([w, h], () => { Backdrop.draw(s); screen(); }, { fx: { pal: PAL16 } });
+    const queued = DEFER;
+    DEFER = null;
+    queued.forEach((f) => f());
+    PostOverlay.drawAt(w);
   },
 };
