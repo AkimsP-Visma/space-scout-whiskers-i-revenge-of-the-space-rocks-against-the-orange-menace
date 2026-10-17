@@ -21,6 +21,7 @@ const CFG = {
   },
   rockSpeed: [0.8, 1.2], rockDrift: 10 * VIEW_K, splitDrift: 20 * VIEW_K,
   ice: { r: [8, 16], speed: [0.9, 1.0] },
+  spin: { rock: 1.5, ice: 1 },   // the most a rock or ice chunk turns, in radians a second (either way)
   comet: { speed: 520 * VIEW_K, maxSlope: 0.1, warn: 1.0, warnX: 468, headR: 3, tail: 110, rowMargin: 6 },
   debris: { count: [6, 10], life: 0.6, speed: [20, 70], blinkFrom: 0.2, sparks: 2 },
   spawn: { x: 500, minY: 14, maxY: 270 - 14 },

@@ -170,3 +170,13 @@ test('the engine drives harder as the belt speeds up and when the scout steers',
   const steering = Play.engineAt(s);
   assert.ok(fast > cruising && steering > fast && steering <= 1, `${cruising} < ${fast} < ${steering} <= 1`);
 });
+test('forceHit keeps its gameOver event for the next step', () => {
+  const s = quiet();
+  run(s, idle, 60);
+  for (let k = 0; k < 3; k++) Play.forceHit(s);
+  assert.ok(s.events.includes('gameOver'));
+  Play.step(s, idle, CFG.step);   // the reader of the next step still sees it
+  assert.ok(s.events.includes('gameOver'));
+  Play.step(s, idle, CFG.step);
+  assert.ok(!s.events.includes('gameOver'));
+});

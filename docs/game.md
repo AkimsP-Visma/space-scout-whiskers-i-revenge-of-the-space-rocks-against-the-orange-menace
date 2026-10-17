@@ -251,8 +251,6 @@ Change one, change the other:
 - The smoke test asserts only the median frame time, not the worst.
 - The LOADING check skips itself when the sounds finish rendering before the first key.
 - The busy-frame timing check holds only about 5 things.
-- `Play.forceHit`'s `gameOver` event is wiped by the next step, so the test walk never plays the game-over sound.
-- Rock and ice spin (`R.n(1.5)`, `R.n(1)` in `spawner.js`) are numbers outside `config.js`.
 - The log box changes size at the seam: the film's 26-glyph box becomes an 18-glyph box.
 - `Boss.step` and `Boss.volley` are tested, but the boss's draw and HUD bar are only checked by eye.
 - `Play.create` without `flyIn` (the film's frame as the first camera) is used only by tests and the smoke test's seam check; the

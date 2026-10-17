@@ -15,9 +15,9 @@ const Spawner = {
   next(seed, n, t) {
     const R = RNG('spawn', seed, n), mix = Spawner.difficulty(t).mix, roll = R.f(), Y = CFG.spawn;
     if (roll < mix.comet) return { kind: 'comet', y: R.i(Y.minY + CFG.comet.rowMargin, Y.maxY - CFG.comet.rowMargin), slope: R.r(-CFG.comet.maxSlope, CFG.comet.maxSlope) };
-    if (roll < mix.comet + mix.ice) return { kind: 'ice', y: R.i(Y.minY, Y.maxY), r: R.i(CFG.ice.r[0], CFG.ice.r[1]), speed: R.r(CFG.ice.speed[0], CFG.ice.speed[1]), spin: R.n(1) };
+    if (roll < mix.comet + mix.ice) return { kind: 'ice', y: R.i(Y.minY, Y.maxY), r: R.i(CFG.ice.r[0], CFG.ice.r[1]), speed: R.r(CFG.ice.speed[0], CFG.ice.speed[1]), spin: R.n(CFG.spin.ice) };
     if (roll < mix.comet + mix.ice + mix.pickup) return { kind: 'pickup', role: R.pick(['spread', 'rocket', 'shield']), y: R.i(Y.minY, Y.maxY), speed: R.r(CFG.pickup.speed[0], CFG.pickup.speed[1]) };
     const size = R.pick(Object.keys(CFG.rocks)), S = CFG.rocks[size];
-    return { kind: 'rock', size, y: R.i(Y.minY, Y.maxY), r: R.i(S.r[0], S.r[1]), speed: R.r(CFG.rockSpeed[0], CFG.rockSpeed[1]), vy: R.n(CFG.rockDrift), spin: R.n(1.5) };
+    return { kind: 'rock', size, y: R.i(Y.minY, Y.maxY), r: R.i(S.r[0], S.r[1]), speed: R.r(CFG.rockSpeed[0], CFG.rockSpeed[1]), vy: R.n(CFG.rockDrift), spin: R.n(CFG.spin.rock) };
   },
 };

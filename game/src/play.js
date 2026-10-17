@@ -38,7 +38,7 @@ const Play = {
     return { steps, acc: a };
   },
   step(s, input, dt) {
-    s.events = [];
+    if (s.keepEvents) s.keepEvents = false; else s.events = [];   // forceHit's events wait here for the next step's reader
     const frozen = s.over || s.complete;   // the score stops when the run ends or the level is complete
     s.t += dt;
     s.scroll = Play.scrollAt(s.t, s.scroll0);
@@ -194,6 +194,8 @@ const Play = {
   // the test switch's hit: it lands even while the scout is invulnerable
   forceHit(s) {
     if (s.over) return;
+    if (!s.keepEvents) s.events = [];
+    s.keepEvents = true;
     s.player.invulnerable = 0;
     if (!Player.hit(s.player)) return;
     s.wowUntil = s.t + CFG.mood.wow;

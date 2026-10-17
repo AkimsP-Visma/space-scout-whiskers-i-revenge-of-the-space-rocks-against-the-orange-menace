@@ -52,3 +52,10 @@ test('spawned sizes stay inside the configured ranges', () => {
     if (s.kind === 'ice') assert.ok(s.r >= CFG.ice.r[0] && s.r <= CFG.ice.r[1]);
   }
 });
+test('rock and ice spin stay within CFG.spin', () => {
+  for (let n = 0; n < 200; n++) {
+    const sp = Spawner.next(7, n, 60);
+    if (sp.kind === 'rock') assert.ok(Math.abs(sp.spin) <= CFG.spin.rock);
+    if (sp.kind === 'ice') assert.ok(Math.abs(sp.spin) <= CFG.spin.ice);
+  }
+});
