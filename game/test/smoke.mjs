@@ -109,8 +109,13 @@ async function walk(browser) {
   check(s.filmTime > 1, `the film plays on the audio clock (at ${s.filmTime.toFixed(2)}s)`);
   await p.shot('2-film');
   await p.page.keyboard.press('Enter');
-  s = await p.until((x) => x.name === 'play', 2000, 'the seam after a skip');
-  check(s.shields === 3 && s.t < 0.5, 'Enter skips the film into a new run with 3 shields');
+  s = await p.until((x) => x.name === 'select', 2000, 'the level select after a skip');
+  check(s.level === 0, 'Enter skips the film into the level select, not into the level');
+  await p.page.waitForTimeout(800);
+  await p.shot('2b-select-after-film');
+  await p.page.keyboard.press('Enter');
+  s = await p.until((x) => x.name === 'play', 2000, 'the seam after the select');
+  check(s.shields === 3 && s.t < 0.5, 'choosing the level starts a new run with 3 shields');
   await p.page.waitForTimeout(200);
   await p.shot('3-seam');
   const y0 = (await p.state()).y;
@@ -158,8 +163,11 @@ async function walk(browser) {
   await q.page.keyboard.press('Escape');
   check((await q.state()).name === 'film', 'one Esc only asks; the film keeps playing');
   await q.page.keyboard.press('Escape');
+  await q.until((x) => x.name === 'select', 2000, 'the level select without sound');
+  await q.page.waitForTimeout(800);
+  await q.page.keyboard.press('Space');
   const silentPlay = await q.until((x) => x.name === 'play', 2000, 'play without sound');
-  check(silentPlay.shields === 3, '?nosound: Esc skips into play');
+  check(silentPlay.shields === 3, '?nosound: Esc skips to the select, and a key starts the level');
   // beat the level: the scout flies off, the level complete card, the level select, then the level starts again with a fly-in
   await q.page.evaluate(() => window.GAME.win());
   await q.page.waitForTimeout(1200);

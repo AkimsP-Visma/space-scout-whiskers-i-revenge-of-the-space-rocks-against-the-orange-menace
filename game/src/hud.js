@@ -67,7 +67,7 @@ const Hud = {
     const pad = (n) => String(n).padStart(CFG.score.digits, '0');
     Hud.box(['SELECT LEVEL'], Math.round(PIX.h * 0.18), { edge: Q.orange });
     levels.forEach((L, i) => Hud.box([(i === chosen ? '> ' : '  ') + L.id + '  ' + L.name + '   BEST ' + pad(bests[i])], Math.round(PIX.h * 0.38) + i * 22, { edge: i === chosen ? Q.orange : Q.slate }));
-    if (Hud.blinkOn(t)) pixText('FIRE OR ENTER TO START', PIX.w / 2, PIX.h - 28, Q.white, { align: 'center', shadow: Q.ink });
+    if (Hud.blinkOn(t)) pixText('FIRE OR ENTER TO START', PIX.w / 2, Math.round(PIX.h * 0.69), Q.white, { align: 'center', shadow: Q.ink });
   },
   error(message) {
     const text = String(message).toUpperCase().slice(0, 2 * ERROR_LINE);

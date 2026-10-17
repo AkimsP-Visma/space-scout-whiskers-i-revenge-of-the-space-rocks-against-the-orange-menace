@@ -46,7 +46,10 @@ current pixel rows.
 
 A level is the belt run up to its boss. Level 1 (`CFG.levels`: `{ id, name }`) is the only one so far. The flow is:
 
-1. **Start.** The first run after the film starts on the film's last frame (the seam, with the camera pulling back). Every
+0. **After the film** (it ends, or Enter / Esc twice skips it) the level select shows, over the film's last frame held still
+   (`Flow.filmDone`, `Flow.afterFilm`); the music carries on from the film's bar line.
+1. **Start.** A level chosen from that first select starts on the film's last frame (the seam, with the camera pulling back,
+   so nothing jumps). Every
    other start (a retry, or a level chosen from the list) is `Play.create(seed, start, { flyIn: true })`: the whole
    field from the first frame (`s.full`, so `View.of(s)`), the scout gliding in from the left to `CFG.intro.to` while steering
    and firing are ignored (`Play.intro`, `CFG.intro.dur`).
@@ -183,7 +186,7 @@ error card. Rows are in `HUD_ROW`. HUD helpers that run inside a world pass go t
   game files into one vm context, the way the page joins them. `$(expression)` reads a value out; `plain(value)` copies
   it into the test's realm, because `assert.deepStrictEqual` compares prototypes and the context has its own
   `Object`. Pass `globals` to stub things like `localStorage` or `console`.
-- **Smoke** (`node game/test/smoke.mjs`, 27 checks): rebuilds the page and runs headless Chromium with
+- **Smoke** (`node game/test/smoke.mjs`, 28 checks): rebuilds the page and runs headless Chromium with
   `--autoplay-policy=no-user-gesture-required`. It checks:
   - a key during LOADING is ignored;
   - the seam continuity diff, and the draw time of a busy frame;

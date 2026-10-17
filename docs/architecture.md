@@ -79,7 +79,7 @@ never a camera. Scenes (`SCENE` in `src/head.html`): `sceneJourney`, `sceneWide`
 ## The game's runtime (`game/src/flow.js`)
 
 ```
-title --any key (sounds ready)--> film --LOOP_T reached / Enter / Esc twice--> play --3 hits, +1 s--> over --Space / Enter--> play
+title --any key (sounds ready)--> film --LOOP_T reached / Enter / Esc twice--> select --Space / Enter--> play --3 hits, +1 s--> over --Space / Enter--> play
                                                    --boss beaten, scout exits--> complete --Space / Enter--> select --Space / Enter--> play
 ```
 

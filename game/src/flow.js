@@ -9,7 +9,7 @@ const EVENT_SOUND = { fire: 'fire', rocketFire: 'rocketFire', pickup: 'pickup', 
 const PILOT_CARD = { from: 14.6, length: 1.4 };   // the film's close-up (14.5-16.0s) looped behind the card: eyes wide, a blink, the gulp
 const FRAME_SAMPLES = 600;                        // play frames kept for the frame-time figures
 const Flow = {
-  name: 'title', since: 0, filmAt: null, filmFrame: null, run: null, runs: 0, bests: [], level: 0, menu: null, paused: false, error: null,
+  name: 'title', since: 0, filmAt: null, filmFrame: null, run: null, runs: 0, bests: [], level: 0, menu: null, afterFilm: false, endFrame: null, paused: false, error: null,
   acc: 0, last: 0, frameMs: [], titleFrame: null, card: null, cardB: null, escPending: false, escAt: 0,
   go(name, now) { Flow.name = name; Flow.since = now; },
   levelId() { return CFG.levels[Flow.level].id; },
@@ -40,17 +40,24 @@ const Flow = {
   film(now) {
     Flow.fallBackIfSilent(now);
     const t = Flow.filmTime(now);
-    if (t >= LOOP_T) { Flow.startRun(now, Flow.filmAt != null ? Flow.filmAt + LOOP_T : null, true); Flow.play(now); return; }
+    if (t >= LOOP_T) { Flow.filmDone(now, Flow.filmAt != null ? Flow.filmAt + LOOP_T : null); return; }
     const f = Math.max(0, Math.floor(t * FPS));
     if (f !== Flow.filmFrame) { renderFrame(f / FPS, CANVAS); Flow.filmFrame = f; }
     if (Flow.escPending && now - Flow.escAt < 3000) Hud.overlay(CANVAS, () => pixText('PRESS ESC AGAIN TO SKIP', PX_W / 2, 170, Q.white, { align: 'center', shadow: Q.ink }));
+  },
+  // the film is over (it ran out, or was skipped): the level select over the film's last frame; the music carries on from
+  // the film's bar line, and the level chosen starts from that frame (the seam)
+  filmDone(now, musicAt = null) {
+    Sound.stopFilm(); Sound.startMusic(musicAt);
+    Flow.afterFilm = true; Flow.escPending = false;
+    Flow.go('select', now);
   },
   // ---- a new run: from the film's last frame (after the film or a skip), or else flying in on the whole field (a retry
   // or a level chosen from the list); musicAt keeps the music on the film's bar line
   startRun(now, musicAt = null, fromFilm = false) {
     Sound.stopFilm(); Sound.startMusic(musicAt); Sound.engineOn();
     Flow.run = Play.create(Flow.seed(), SEAM_START, { flyIn: !fromFilm }); Flow.runs++;
-    Flow.acc = 0; Flow.last = now; Flow.paused = false; Flow.escPending = false;
+    Flow.acc = 0; Flow.last = now; Flow.paused = false; Flow.escPending = false; Flow.afterFilm = false;
     Flow.go('play', now);
   },
   play(now) {
@@ -83,6 +90,7 @@ const Flow = {
     Flow.saveBest(Flow.run.score);
     Sound.engineOff(); Sound.sfx('levelComplete');
     Flow.menu = { scrolled: Flow.run.scrolled, t: Flow.run.t, at: now };
+    Flow.afterFilm = false;
     Flow.go('complete', now);
   },
   menuState(now) {
@@ -93,7 +101,14 @@ const Flow = {
     Draw.menu(CANVAS, Flow.menuState(now), () => Hud.levelComplete(Flow.run.score, Flow.best(), Flow.secondsIn(now)));
   },
   select(now) {
-    Draw.menu(CANVAS, Flow.menuState(now), () => Hud.select(CFG.levels, Flow.level, CFG.levels.map((_, i) => Flow.bests[i] ?? 0), Flow.secondsIn(now)));
+    const list = () => Hud.select(CFG.levels, Flow.level, CFG.levels.map((_, i) => Flow.bests[i] ?? 0), Flow.secondsIn(now));
+    if (Flow.afterFilm) {   // the film's last frame, held, with the list over it
+      if (!Flow.endFrame) { Flow.endFrame = Flow.canvas(); renderFrame(FILM_END, Flow.endFrame); }
+      ctx = CANVAS.getContext('2d'); ctx.drawImage(Flow.endFrame, 0, 0);
+      Hud.overlay(CANVAS, list);
+      return;
+    }
+    Draw.menu(CANVAS, Flow.menuState(now), list);
   },
   over(now) {
     const t = Flow.secondsIn(now);
@@ -115,9 +130,9 @@ const Flow = {
       if (Input.is(code, 'mute')) { Sound.setMuted(!Sound.muted); continue; }
       if (Flow.name === 'title') { if (Sound.ready || Sound.failed) Flow.startFilm(now); continue; }
       if (Flow.name === 'film') {
-        if (Input.is(code, 'skip')) { Flow.startRun(now, null, true); continue; }
+        if (Input.is(code, 'skip')) { Flow.filmDone(now); continue; }
         if (Input.is(code, 'skipEsc')) {
-          if (Flow.escPending && now - Flow.escAt < 3000) { Flow.startRun(now, null, true); continue; }
+          if (Flow.escPending && now - Flow.escAt < 3000) { Flow.filmDone(now); continue; }
           Flow.escPending = true; Flow.escAt = now; Flow.filmFrame = -1; continue;
         }
       }
@@ -127,7 +142,7 @@ const Flow = {
         const n = CFG.levels.length;
         if (Input.is(code, 'up')) Flow.level = (Flow.level + n - 1) % n;
         else if (Input.is(code, 'down')) Flow.level = (Flow.level + 1) % n;
-        else if ((Input.is(code, 'fire') || Input.is(code, 'skip')) && Flow.secondsIn(now) >= CFG.gameOver.retryLockout) { Sound.sfx('retry'); Flow.startRun(now); }
+        else if ((Input.is(code, 'fire') || Input.is(code, 'skip')) && Flow.secondsIn(now) >= CFG.gameOver.retryLockout) { Sound.sfx('retry'); Flow.startRun(now, null, Flow.afterFilm); }
         continue;
       }
       if (Flow.name === 'over' && (Input.is(code, 'fire') || Input.is(code, 'skip')) && Flow.secondsIn(now) >= CFG.gameOver.retryLockout) { Sound.sfx('retry'); Flow.startRun(now); }
