@@ -98,9 +98,11 @@ x -40 minus their radius. Comets go only when the whole 110 px tail has left, so
   both are limited by ammo, not time: `CFG.pickup.ammo` trigger pulls each (spread 24, rocket 15) (a spread pull is one round for three
   bolts), then the weapon returns to `default` (`player.weapon`, `player.ammo`, `Player.spend`). Picking up the weapon you already hold
   adds a full pickup's rounds to what is left; a different one replaces it.
-- **Overheat** (the default gun only, `CFG.heat`): each shot adds `perShot` heat, which cools at `cool` per second all
-  the time. At full heat the gun jams (`player.overheated`, event `overheat`) and fires again only once the heat is
-  down to `resumeAt`. Holding fire takes about 2.7 s to jam and the jam lasts about 1.9 s. Pickup weapons add no heat.
+- **Overheat** (every weapon, `CFG.heat`): each trigger pull adds heat by its weapon (`perShot`: default 0.09, spread and
+  rocket 0.16), and the heat cools at `cool` per second all the time. At full heat the gun jams (`player.overheated`,
+  event `overheat`) and nothing fires until the heat is back to `resumeAt` (0). Holding fire takes about 5 s to jam
+  with the default gun and 1.6 s with a pickup weapon; a jam lasts about 2.9 s. The shot that jams the gun still
+  fires and still spends its round.
   `shield` restores one pip up to the maximum.
 - **The boss** (`boss.js`, numbers in `CFG.boss`) appears at score 2000, 4000, ... with `hp` 100 plus 50 per earlier
   boss. It enters from the right to `enterX`, tracks the scout's y, and fires volleys of 1 to 3 bolts seeded by
@@ -142,7 +144,7 @@ x -40 minus their radius. Comets go only when the whole 110 px tail has left, so
 `Hud.play` shows:
 - the film's `SCOUT 07` tag;
 - `SCORE 000000` where the film's `RANGE` box sat;
-- three shield pips, under them the heat bar (yellow, red above `CFG.hud.heatWarn`; it blinks with `HOT` beside it
+- three shield pips, under them the heat bar, always shown (yellow, red above `CFG.hud.heatWarn`; it blinks with `HOT` beside it
   while the gun is jammed) and under that the active pickup weapon (`SPR` or `RKT`) with its rounds left;
 - while a boss lives, a `WARDEN` hp bar over the middle of the top row (grey, red in phase 2);
 - `LOG 02: BELT AHEAD`, typed over 1 s in the seam and held for 3 s.
@@ -153,7 +155,7 @@ error card. Rows are in `HUD_ROW`. HUD helpers that run inside a world pass go t
 
 ## Tests
 
-- **Unit** (`node --test game/test/*.test.mjs`, 69 tests): `game/test/load.mjs` loads `vendor/core.js` plus the named
+- **Unit** (`node --test game/test/*.test.mjs`, 70 tests): `game/test/load.mjs` loads `vendor/core.js` plus the named
   game files into one vm context, the way the page joins them. `$(expression)` reads a value out; `plain(value)` copies
   it into the test's realm, because `assert.deepStrictEqual` compares prototypes and the context has its own
   `Object`. Pass `globals` to stub things like `localStorage` or `console`.

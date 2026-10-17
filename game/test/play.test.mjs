@@ -125,10 +125,21 @@ test('holding fire on the default gun overheats it and the gun jams until it has
   const fired = s.fired; run(s, firing, 30); assert.equal(s.fired, fired);   // jammed
   run(s, firing, 60 * 3); assert.ok(s.fired > fired);                          // cooled, firing again
 });
-test('a pickup weapon does not heat the gun', () => {
-  const s = quiet(); s.player.weapon = 'spread'; s.player.ammo = 1000;
-  run(s, firing, 120);
-  assert.equal(s.player.heat, 0); assert.equal(s.player.overheated, false);
+test('pickup weapons heat the gun more than the default one, and a jam stops every weapon', () => {
+  const heatAfterOne = (weapon) => { const s = quiet(); s.player.weapon = weapon; s.player.ammo = 50; run(s, firing); return s.player.heat; };
+  assert.ok(Math.abs(heatAfterOne('default') - CFG.heat.perShot.default) < 1e-9);
+  assert.ok(Math.abs(heatAfterOne('spread') - CFG.heat.perShot.spread) < 1e-9);
+  assert.ok(Math.abs(heatAfterOne('rocket') - CFG.heat.perShot.rocket) < 1e-9);
+  const s = quiet(); s.player.weapon = 'rocket'; s.player.ammo = 50;
+  for (let i = 0; i < 60 * 5 && !s.player.overheated; i++) run(s, firing);
+  assert.equal(s.player.overheated, true);
+  const fired = s.fired; run(s, firing, 30); assert.equal(s.fired, fired);
+});
+test('a jammed gun fires again only when the heat is back to 0', () => {
+  const s = quiet(); s.player.heat = 1; s.player.overheated = true;
+  while (s.player.heat > 0.2) run(s, firing);
+  assert.equal(s.fired, 0);
+  run(s, firing, 60 * 2); assert.ok(s.fired > 0);
 });
 test('a rocket bolt one-shots a large rock with no split', () => {
   const s = quiet();

@@ -23,17 +23,14 @@ const Player = {
     p.cooldown = 1 / CFG.bolt.perSecond;
     return { x: p.x + CFG.bolt.noseDx, y: p.y + CFG.bolt.noseDy };
   },
-  // a shot left the gun: the default gun heats up (true when that jams it), a pickup weapon loses a round and falls
-  // back to the default gun when it is out
+  // a shot left the gun: it heats the gun by its weapon's amount (true when that jams it), and a pickup weapon loses a
+  // round and falls back to the default gun when it is out
   spend(p) {
-    if (p.weapon === 'default') {
-      p.heat = Math.min(1, p.heat + CFG.heat.perShot);
-      if (p.heat < 1) return false;
-      p.overheated = true;
-      return true;
-    }
-    if (--p.ammo <= 0) { p.weapon = 'default'; p.ammo = 0; }
-    return false;
+    p.heat = Math.min(1, p.heat + CFG.heat.perShot[p.weapon]);
+    const jammed = p.heat >= 1;
+    if (jammed) p.overheated = true;
+    if (p.weapon !== 'default' && --p.ammo <= 0) { p.weapon = 'default'; p.ammo = 0; }
+    return jammed;
   },
   // something hit the scout: one shield, unless it is still invulnerable; true when a shield was lost
   hit(p) {

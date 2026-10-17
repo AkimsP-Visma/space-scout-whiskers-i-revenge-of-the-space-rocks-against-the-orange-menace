@@ -34,7 +34,7 @@ const CFG = {
   mood: { happy: 0.4, wow: 0.6 },
   engine: { cruise: 0.6, steer: 0.15 },   // the engine's drive at cruise pace, and how much steering adds
   pickup: { r: 5, speed: [0.5, 0.7], spinRate: 0.8, ammo: { spread: 24, rocket: 15 }, spawnFrom: 0, share: 0.4 },   // ammo: trigger pulls a pickup weapon lasts
-  heat: { perShot: 0.12, cool: 0.35, resumeAt: 0.35 },   // the default gun: heat per shot (0..1), cooling per second, and the heat at which a jammed gun fires again
+  heat: { perShot: { default: 0.09, spread: 0.16, rocket: 0.16 }, cool: 0.35, resumeAt: 0 },   // every weapon heats the gun: heat per trigger pull (0..1) by weapon, cooling per second, and the heat at which a jammed gun fires again
   rocket: { speed: 200 * VIEW_K, r: 4, length: 7, debrisCount: 12, sparkCount: 6 },
   spread: { vy: 14 * VIEW_K },
   boss: {
