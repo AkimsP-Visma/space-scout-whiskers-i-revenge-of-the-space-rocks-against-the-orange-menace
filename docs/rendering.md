@@ -2,8 +2,9 @@
 
 ## The grid and the palette
 
-- Every scene draws on a **320x180 low-res grid** (`RES = [PX_W, PX_H]`), scaled up 6x to 1920x1080. All scene
-  coordinates are low-res pixels; y grows downward.
+- Every film scene draws on a **320x180 low-res grid** (`RES = [PX_W, PX_H]`), scaled up 6x to 1920x1080. The game's
+  camera (`View.at`) starts on that grid and eases out to 480x270 (4 px a pixel); the film's props clamp to `PIX.w` x
+  `PIX.h`, the current grid, so they work at either. All scene coordinates are low-res pixels; y grows downward.
 - `lowres(RES, draw, { fx: { pal: PAL16 } })` runs `draw` with `ctx` swapped to a 320x180 canvas, then draws it scaled
   up with hard pixels. `fx.pal` snaps every pixel to the palette, a cheap safety net (about 1 ms).
 - **Palette** `Q` (= `PAL16`, in `src/space.js`): ink `#14101e` (empty space), night, blue, sky, ice, white, grey,

@@ -9,8 +9,9 @@ are changing before reading the code.
 Two things built from one source:
 - **The film**: 28 s of 16:9 pixel art. Scout 07, a small white ship with an orange tabby pilot, cruises through an
   asteroid belt to a ringed planet, threads the gap in its rings, bursts into sunlight and flies home.
-- **The game**: starts from the film's exact last frame and keeps flying into an endless belt: shoot brown rocks,
-  dodge grey ice and comets, three shields.
+- **The game**: after the film, a level select (the film's last frame eases out into it) and then level 1: shoot brown
+  rocks, dodge grey ice and comets, three shields, pickups, a gun that overheats, and the Warden at score 2000. Beating it
+  ends the level. A second level is listed but locked.
 
 Everything is code: no image or audio files (the only image is the README screenshot in `docs/images/`). The film is
 made with the **animate** plugin for Claude Code (pixel style); the game reuses the film's drawing code directly.
@@ -26,7 +27,7 @@ src/              the film, shared with the game: head.html (timeline, shots, cu
                   scout.js (ship + tiny pilot), pilot.js (the cat close-up), shots-journey.js, shots-planet.js
                   (the five scenes), bridges.js (per-shot resolution and CRT settings), score.js (film soundtrack)
 piece.json        the film's manifest for the animate plugin (style, scene file order)
-game/             build.mjs, src/ (13 game files), vendor/ (copy of the animate kit), test/, README.md
+game/             build.mjs, src/ (15 game files), vendor/ (copy of the animate kit), test/, README.md
 docs/             architecture, rendering, film, game, lessons; images/; superpowers/ (original game spec + plan)
 brief.md, LOG.md  the film's brief and its production log
 ```
@@ -38,8 +39,8 @@ Generated and git-ignored: `index.html` (film page), `game/index.html`, `frames/
 
 Game:
 - `node game/build.mjs` builds `game/index.html`; open it in a desktop browser.
-- `node --test game/test/*.test.mjs` runs the logic tests (44, about 0.2 s).
-- `node game/test/smoke.mjs` runs the browser test (22 checks, about 40 s). It includes the seam check (the game's
+- `node --test game/test/*.test.mjs` runs the logic tests (79, about 0.2 s).
+- `node game/test/smoke.mjs` runs the browser test (31 checks, about 40 s). It includes the seam check (the game's
   first frame against the film's last) and frame time; it writes screenshots to `game/test-output/`. Look at them.
 
 Film (animate plugin; the version folder can change on update, check `ls ~/.claude/plugins/cache/animate/animate/`):
@@ -60,7 +61,7 @@ node $ANIM/tools/review.mjs .                         # checks + contact sheets 
 
 1. **`src/` is shared by the film and the game.** Every change there changes both. After editing `src/`: rebuild the
    film with the plugin, look at stills, and run the game's smoke test.
-2. **All drawing is on the 320x180 grid** inside `lowres(RES, () => ...)`, in whole pixels (`Math.round`), with the
+2. **All drawing is on a low-res grid** (the film's 320x180; in play the camera's, up to 480x270, see `docs/game.md`) inside `lowres(...)`, in whole pixels (`Math.round`), with the
    PAL16 palette (`Q.*`) and the pixel kit's primitives (`prect`, `pset`, `ppoly`, `pellipse`, `pline`, `pdither`,
    `pglow`, `sprite`, `pixText`). No canvas arcs, strokes, `fillText`, alpha fades or smooth gradients: dither instead.
 3. **Colour has meaning.** Orange is the scout's alone (ship stripe, flame, pilot, bolts, HUD tag edge). Pink and
@@ -76,7 +77,7 @@ node $ANIM/tools/review.mjs .                         # checks + contact sheets 
    top-level name a clear, unique name.
 7. **No URLs and no `data:` URIs** in any source file, comments included; both builds refuse them.
 8. **Game structure:** every tunable number goes in `game/src/config.js`. The logic files (collide, spawner, objects,
-   player, play, input, best-score) never draw; draw, hud and backdrop never change state. Write the test first.
+   player, view, boss, play, input, best-score) never draw; draw, hud and backdrop never change state. Write the test first.
 9. **`game/vendor/` is a copy of the animate kit** (MIT). Do not edit it except to re-sync; its two changes are listed
    in `game/vendor/README.md`. To change kit behaviour, write a new function under a new name in `src/` or `game/src/`.
 10. **Some game values are hand-copied from the film** and must change together: see "Couplings" in `docs/game.md`.

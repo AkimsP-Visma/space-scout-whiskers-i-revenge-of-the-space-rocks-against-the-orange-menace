@@ -49,17 +49,26 @@ async function seamAndDrawTime(p) {
     const run = Play.create(1, SEAM_START);
     Draw.frame(game, run);
     const thumb = (c) => { const s = document.createElement('canvas'); s.width = 160; s.height = 90; const g = s.getContext('2d'); g.drawImage(c, 0, 0, 160, 90); return g.getImageData(0, 0, 160, 90).data; };
-    const a = thumb(film), b = thumb(game);
-    let sum = 0, n = 0;
-    for (let y = 18; y < 90; y++) {
-      if (y >= 70 && y < 86) continue;
-      for (let x = 0; x < 160; x++) for (let c = 0; c < 3; c++) { const i = (y * 160 + x) * 4 + c; sum += Math.abs(a[i] - b[i]); n++; }
-    }
+    // the level select's first frame after the film: the same frame, the scout drawn as its marker
+    const menu = document.createElement('canvas'); menu.width = W; menu.height = H;
+    const ms = { t: 0, secs: 0, fromFilm: true, scrolled: 0, scroll: CFG.seam.startScroll, moonFrom: null, view: View.at(0), throttle: CFG.seam.throttleFrom };
+    Draw.menu(menu, ms, (v) => { hudTag({ at: -1 }); Draw.marker(ms, { x: MENU_X, y: MENU_Y0 }, v); });
+    const a = thumb(film), b = thumb(game), c2 = thumb(menu);
+    const diff = (u, w) => {
+      let sum = 0, n = 0;
+      for (let y = 18; y < 90; y++) {
+        if (y >= 70 && y < 86) continue;
+        for (let x = 0; x < 160; x++) for (let c = 0; c < 3; c++) { const i = (y * 160 + x) * 4 + c; sum += Math.abs(u[i] - w[i]); n++; }
+      }
+      return sum / n;
+    };
+    const sum = diff(a, b), n = 1, menuDiff = diff(a, c2);
     for (let k = 0; k < 600; k++) Play.step(run, { x: 0, y: k % 120 < 60 ? -1 : 1, fire: true }, CFG.step);
     const t0 = performance.now();
     for (let k = 0; k < 30; k++) Draw.frame(game, run);
-    return { diff: sum / n, ms: (performance.now() - t0) / 30, things: run.objects.length + run.bolts.length + run.debris.length };
+    return { diff: sum / n, menuDiff, ms: (performance.now() - t0) / 30, things: run.objects.length + run.bolts.length + run.debris.length };
   });
+  check(r.menuDiff < 2, `the level select's first frame matches the film's last (mean difference ${r.menuDiff.toFixed(2)} of 255 outside the HUD)`);
   check(r.diff < 2, `the seam: the game's first frame matches the film's last (mean difference ${r.diff.toFixed(2)} of 255 outside the HUD)`);
   check(r.ms < 16.7, `a play frame with ${r.things} things in it draws in ${r.ms.toFixed(1)}ms (budget 16.7ms)`);
 }
@@ -109,8 +118,23 @@ async function walk(browser) {
   check(s.filmTime > 1, `the film plays on the audio clock (at ${s.filmTime.toFixed(2)}s)`);
   await p.shot('2-film');
   await p.page.keyboard.press('Enter');
-  s = await p.until((x) => x.name === 'play', 2000, 'the seam after a skip');
-  check(s.shields === 3 && s.t < 0.5, 'Enter skips the film into a new run with 3 shields');
+  s = await p.until((x) => x.name === 'select', 2000, 'the level select after a skip');
+  check(s.level === 0, 'Enter skips the film into the level select, not into the level');
+  await p.page.waitForTimeout(2200);
+  await p.shot('2b-select-after-film');
+  await p.page.keyboard.press('ArrowDown');
+  await p.page.waitForTimeout(150);
+  check((await p.state()).level === 1, 'Down picks the second level');
+  await p.page.waitForTimeout(700);
+  await p.page.keyboard.press('Enter');
+  await p.page.waitForTimeout(300);
+  await p.shot('2c-select-locked');
+  check((await p.state()).name === 'select', 'the locked second level will not start');
+  await p.page.keyboard.press('ArrowUp');
+  await p.page.waitForTimeout(700);
+  await p.page.keyboard.press('Enter');
+  s = await p.until((x) => x.name === 'play', 2000, 'the level after the select');
+  check(s.shields === 3 && s.t < 0.5 && Math.abs(s.x - 192) < 25, `choosing the first level starts a new run with 3 shields, from where the marker was (x ${s.x.toFixed(0)})`);
   await p.page.waitForTimeout(200);
   await p.shot('3-seam');
   const y0 = (await p.state()).y;
@@ -156,8 +180,35 @@ async function walk(browser) {
   const silentFilm = await q.state();
   check(silentFilm.filmTime > 0.3, `?nosound: the film runs on the wall clock (at ${silentFilm.filmTime.toFixed(2)}s)`);
   await q.page.keyboard.press('Escape');
+  check((await q.state()).name === 'film', 'one Esc only asks; the film keeps playing');
+  await q.page.keyboard.press('Escape');
+  await q.until((x) => x.name === 'select', 2000, 'the level select without sound');
+  await q.page.waitForTimeout(2000);
+  await q.page.keyboard.press('Space');
   const silentPlay = await q.until((x) => x.name === 'play', 2000, 'play without sound');
-  check(silentPlay.shields === 3, '?nosound: Esc skips into play');
+  check(silentPlay.shields === 3, '?nosound: Esc skips to the select, and a key starts the level');
+  // beat the level: the scout flies off, the level complete card, the level select, then the level starts again with a fly-in
+  await q.page.evaluate(() => window.GAME.win());
+  await q.page.waitForTimeout(1200);
+  const exiting = await q.state();
+  check(exiting.name === 'play' && exiting.shields === 3, 'beating the boss hands over to the exit, not the card, at once');
+  await q.page.waitForTimeout(1200);
+  await q.shot('6-exit');
+  const done = await q.until((x) => x.name === 'complete', 6000, 'the level complete card');
+  check(done.best > 0, `the level is complete: the card shows, the best is kept (${done.best})`);
+  await q.page.waitForTimeout(800);
+  await q.shot('7-level-complete');
+  await q.page.keyboard.press('Space');
+  await q.until((x) => x.name === 'select', 1000, 'the level select');
+  await q.page.waitForTimeout(800);
+  await q.shot('8-level-select');
+  await q.page.keyboard.press('Space');
+  const again = await q.until((x) => x.name === 'play', 1000, 'the level from the select');
+  check(again.t < 0.5 && again.level === 0, 'a level chosen from the list starts from the select');
+  await q.page.waitForTimeout(1800);
+  const flown = await q.state();
+  check(Math.abs(flown.x - 192) < 2, `the scout has flown in to its spot (x ${flown.x.toFixed(0)})`);
+  await q.shot('9-fly-in');
   const blocked = await open(browser, '?test', BLOCKED_AUDIO);
   await blocked.until((x) => x.ready, 30000, 'the sounds to render');
   await blocked.page.keyboard.press('KeyX');

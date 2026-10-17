@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { loadGame } from './load.mjs';
 
-const $ = loadGame(['config.js', 'collide.js', 'spawner.js', 'objects.js', 'player.js', 'play.js']);
+const $ = loadGame(['config.js', 'collide.js', 'spawner.js', 'objects.js', 'player.js', 'view.js', 'play.js']);
 const Play = $('Play'), O = $('Objects'), Spawner = $('Spawner'), CFG = $('CFG');
 const START = { x: 112, y: 100 }, idle = { x: 0, y: 0, fire: false }, firing = { x: 0, y: 0, fire: true };
 const run = (s, input = idle, n = 1) => { for (let i = 0; i < n; i++) Play.step(s, input, 1 / 60); };
@@ -89,7 +89,7 @@ test('collecting a shield pickup adds one shield up to the maximum', () => {
   run(s);
   assert.equal(s.player.shields, CFG.scout.shields);
 });
-test('collecting a spread pickup arms the spread weapon and it expires', () => {
+test('collecting a spread pickup arms the spread weapon and it runs out of ammo', () => {
   const s = quiet();
   const pu = { kind: 'pickup', role: 'spread', x: s.player.x, y: s.player.y, r: CFG.pickup.r, vx: 0, vy: 0, angle: 0, spin: 0 };
   s.objects.push(pu);
@@ -98,9 +98,48 @@ test('collecting a spread pickup arms the spread weapon and it expires', () => {
   const before = s.bolts.length;
   run(s, { x: 0, y: 0, fire: true });
   assert.equal(s.bolts.length - before, 3);
-  // weapon expires after its duration
-  s.player.weaponUntil = s.t - 0.001;
-  run(s); assert.equal(s.player.weapon, 'default');
+  // each trigger pull spends one round, however many bolts it throws; the last one hands back the default gun
+  assert.equal(s.player.ammo, CFG.pickup.ammo.spread - 1);
+  s.player.ammo = 1; s.player.cooldown = 0;
+  run(s, { x: 0, y: 0, fire: true });
+  assert.equal(s.player.weapon, 'default'); assert.equal(s.player.ammo, 0);
+});
+test('picking up the weapon you hold adds its ammo; a different one replaces it', () => {
+  const s = quiet(), pick = (role) => { s.objects.push({ kind: 'pickup', role, x: s.player.x, y: s.player.y, r: CFG.pickup.r, vx: 0, vy: 0, angle: 0, spin: 0 }); run(s); };
+  pick('rocket'); assert.equal(s.player.ammo, 15);
+  s.player.ammo = 4; pick('rocket'); assert.equal(s.player.ammo, 4 + 15);
+  pick('spread'); assert.equal(s.player.weapon, 'spread'); assert.equal(s.player.ammo, CFG.pickup.ammo.spread);
+});
+test('a pickup weapon does not run out with time, only with shots', () => {
+  const s = quiet();
+  s.objects.push({ kind: 'pickup', role: 'rocket', x: s.player.x, y: s.player.y, r: CFG.pickup.r, vx: 0, vy: 0, angle: 0, spin: 0 });
+  run(s, idle, 60 * 30);
+  assert.equal(s.player.weapon, 'rocket'); assert.equal(s.player.ammo, CFG.pickup.ammo.rocket);
+});
+test('holding fire on the default gun overheats it and the gun jams until it has cooled', () => {
+  const s = quiet();
+  let hot = null;
+  for (let i = 0; i < 60 * 10 && hot == null; i++) { run(s, firing); if (s.events.includes('overheat')) hot = i; }
+  assert.ok(hot > 60, 'it should take more than a second'); assert.ok(hot < 60 * 5, 'and less than five');
+  assert.equal(s.player.overheated, true);
+  const fired = s.fired; run(s, firing, 30); assert.equal(s.fired, fired);   // jammed
+  run(s, firing, 60 * 3); assert.ok(s.fired > fired);                          // cooled, firing again
+});
+test('pickup weapons heat the gun more than the default one, and a jam stops every weapon', () => {
+  const heatAfterOne = (weapon) => { const s = quiet(); s.player.weapon = weapon; s.player.ammo = 50; run(s, firing); return s.player.heat; };
+  assert.ok(Math.abs(heatAfterOne('default') - CFG.heat.perShot.default) < 1e-9);
+  assert.ok(Math.abs(heatAfterOne('spread') - CFG.heat.perShot.spread) < 1e-9);
+  assert.ok(Math.abs(heatAfterOne('rocket') - CFG.heat.perShot.rocket) < 1e-9);
+  const s = quiet(); s.player.weapon = 'rocket'; s.player.ammo = 50;
+  for (let i = 0; i < 60 * 5 && !s.player.overheated; i++) run(s, firing);
+  assert.equal(s.player.overheated, true);
+  const fired = s.fired; run(s, firing, 30); assert.equal(s.fired, fired);
+});
+test('a jammed gun fires again only when the heat is back to 0', () => {
+  const s = quiet(); s.player.heat = 1; s.player.overheated = true;
+  while (s.player.heat > 0.2) run(s, firing);
+  assert.equal(s.fired, 0);
+  run(s, firing, 60 * 2); assert.ok(s.fired > 0);
 });
 test('a rocket bolt one-shots a large rock with no split', () => {
   const s = quiet();

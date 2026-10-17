@@ -183,7 +183,7 @@ const MOON_LIGHT = (() => { const v = [0.6, -0.55, 0.58], n = Math.hypot(...v); 
 const MOON_RAMP = [Q.night, Q.slate, Q.grey, Q.white];
 function moonBody(cx, cy, r, key = 'moon') {
   const R = RNG('craters', key), craters = Array.from({ length: 9 }, () => [R.r(-0.75, 0.75), R.r(-0.8, -0.1), R.r(0.07, 0.18)]);
-  const y0 = Math.max(0, Math.floor(cy - r)), y1 = Math.min(PX_H - 1, Math.ceil(cy + r)), x0 = Math.max(0, Math.floor(cx - r)), x1 = Math.min(PX_W - 1, Math.ceil(cx + r));
+  const y0 = Math.max(0, Math.floor(cy - r)), y1 = Math.min(PIX.h - 1, Math.ceil(cy + r)), x0 = Math.max(0, Math.floor(cx - r)), x1 = Math.min(PIX.w - 1, Math.ceil(cx + r));
   PLOT_C = null;
   for (let j = y0; j <= y1; j++) for (let i = x0; i <= x1; i++) {
     const nx = (i + 0.5 - cx) / r, ny = (j + 0.5 - cy) / r, d2 = nx * nx + ny * ny;
@@ -205,7 +205,7 @@ function comet(x, y, dx, dy, len) {
     const w = 1 + k * 0.07, fade = 1 - k / len, col = k < 8 ? Q.white : k < 30 ? Q.ice : k < 60 ? Q.sky : Q.blue;
     for (let o = -Math.ceil(w); o <= Math.ceil(w); o++) {
       const px = Math.round(x - ux * k - uy * o), py = Math.round(y - uy * k + ux * o);
-      if (px < 0 || py < 0 || px >= PX_W || py >= PX_H) continue;
+      if (px < 0 || py < 0 || px >= PIX.w || py >= PIX.h) continue;
       if (fade * (1 - Math.abs(o) / (w + 1)) > bayer(px, py)) plot(px, py, col);
     }
   }

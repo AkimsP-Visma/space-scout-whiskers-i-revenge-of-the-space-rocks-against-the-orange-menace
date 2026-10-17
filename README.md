@@ -13,14 +13,19 @@ consequences.
 moon and a comet, to a ringed planet. It threads the gap in the rings, comes out into sunlight, does a barrel roll
 nobody asked for, and heads home. The log entry reads `LOG 01: FOUND A RINGED ONE`. That is the entire report.
 
-**The game.** The film does not so much end as stop being in charge. From its last frame the scout keeps flying,
-into an endless belt:
+**The game.** The film does not so much end as stop being in charge. From its last frame the scout keeps flying, to a
+level select, and from there into the belt:
 
 - Brown rocks can be shot. Large ones split into two medium ones, which the rocks regard as an escalation.
 - Grey ice cannot be shot. Bolts spark off it. There is no appeal process.
 - Comets cannot be shot either, but each one puts up a red `!` a second before it arrives, which is more warning
   than most comets give.
 - You have three shields. The cat has nine lives, but those are not in this build.
+- Some rocks are not rocks but presents: a spread shot, rockets, a shield. The weapons come with a number of shots, not a
+  timer, and every weapon heats the gun, which jams when you hold the trigger down like it owes you money.
+- At 2000 points the Warden arrives and does not hold still. Beat it and the level is complete: the scout flies off to
+  the right with the air of someone who has filed the report. There is a second level on the list. It is not ready, and
+  says so.
 
 The belt doubles its speed over the first two minutes and then holds there, on the reasonable assumption that you
 were not going to last much longer anyway.
@@ -37,9 +42,11 @@ allows sound; that is its policy, not a design choice.
 | key | does |
 |---|---|
 | Arrows / WASD | steer |
-| Space | fire (hold it for auto-fire); retry after a game over |
-| Enter / Esc | skip the film |
-| P | pause |
+| Space | fire (hold it for auto-fire); start a level; retry after a game over |
+| Up / Down | pick a level |
+| Enter | start a level, retry, continue; skip the film |
+| Esc Esc | skip the film (the first Esc only asks) |
+| P / Esc | pause |
 | M | mute |
 
 Your best score is kept in your browser. It is not uploaded anywhere. Nobody else needs to know.

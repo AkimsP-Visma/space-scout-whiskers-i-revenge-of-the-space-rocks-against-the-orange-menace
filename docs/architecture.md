@@ -79,7 +79,8 @@ never a camera. Scenes (`SCENE` in `src/head.html`): `sceneJourney`, `sceneWide`
 ## The game's runtime (`game/src/flow.js`)
 
 ```
-title --any key (sounds ready)--> film --LOOP_T reached / Enter / Esc--> play --3 hits, +1 s--> over --Space--> play
+title --any key (sounds ready)--> film --LOOP_T reached / Enter / Esc twice--> select --Space / Enter--> play --3 hits, +1 s--> over --Space / Enter--> play
+                                                   --boss beaten, scout exits--> complete --Space / Enter--> select --Space / Enter--> play
 ```
 
 - **title**: `renderFrame(0)` is drawn once into `Flow.titleFrame`; each frame draws that plus `Hud.title`
@@ -87,16 +88,18 @@ title --any key (sounds ready)--> film --LOOP_T reached / Enter / Esc--> play --
 - **film**: `Sound.start()` and `Sound.playFilm()` set `Flow.filmAt` on the audio clock. Each frame
   `fallBackIfSilent` runs first: an AudioContext the browser keeps suspended gets `CFG.audioGrace` seconds, then the
   film restarts silently on the wall clock. `renderFrame` runs only when the frame index changes.
-- **play**: `startRun` creates the run (`Play.create(seed, SEAM_START)`), starts the music on the film's bar line and
-  the engine. Each frame: `Play.catchUp` turns the time since the last frame into fixed steps (`CFG.step` = 1/60 s,
+- **play**: `startRun` creates the run (`Play.create` with `flyIn`, carrying on the select's stars and scout when it came
+  from the select), starts the music if it is not already playing and the engine. Each frame: `Play.catchUp` turns the time since the last frame into fixed steps (`CFG.step` = 1/60 s,
   at most `CFG.maxCatchUp` = 0.25 s of catch-up after a stall). Each step runs
   `Play.step(run, Input.steer(), step)` and plays the sound for each event. Then `Sound.engineSet(Play.engineAt(run))`
   and `Draw.frame`, timed into `Flow.frameMs`. One second after game over (`CFG.gameOver.card`), `endRun` saves the
   best score.
 - **over**: `TT` loops through the film's pilot close-up (`PILOT_CARD`); `scenePilot()` is redrawn into a cached
   canvas only when `B` changes, with `Hud.card` over it. Space retries after `CFG.gameOver.retryLockout`.
+- **complete** and **select**: `Draw.menu` draws the belt's backdrop alone, scrolling, with `Hud.levelComplete` or `Hud.select`
+  over it and the scout as the select's marker; after the film it is the film's last frame easing out (see `docs/game.md`, Levels).
 - **keys**: `Input.takePressed()` gives one-shot presses (key repeats do not count); held keys steer and fire.
-  M mutes in every state; P pauses in play. A separate keydown listener calls `Sound.unlock()`, because strict
+  M mutes in every state; P or Esc pauses in play. A separate keydown listener calls `Sound.unlock()`, because strict
   browsers only start audio inside the key event itself.
 - **crash**: any exception stops the loop, is logged with the state's name, and `Hud.error` shows it.
 - **test hooks**: `?test` exposes `window.GAME = { state(), hit() }`; `?nosound` starts silent on purpose. Every
@@ -104,7 +107,9 @@ title --any key (sounds ready)--> film --LOOP_T reached / Enter / Esc--> play --
 
 ## The seam: film to game
 
-The game's first frame is the film's last: the smoke test measures a mean difference of 0.04 out of 255 outside
+The level select's first frame after the film is the film's last, with the scout drawn as its marker (`Flow.menuState`,
+`Draw.menu`): the smoke test measures it, and `Draw.frame` of a run that follows the film (`Play.create` without `flyIn`),
+at a mean difference of 0.04 out of 255 outside a mean difference of 0.04 out of 255 outside
 the HUD rows. The values that make this work live in `game/src/backdrop.js`:
 
 | value | what it carries over |
