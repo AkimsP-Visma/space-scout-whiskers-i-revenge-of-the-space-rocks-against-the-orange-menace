@@ -95,9 +95,9 @@ x -40 minus their radius. Comets go only when the whole 110 px tail has left, so
 
 - **Pickups** spawn as a growing share of the mix (`CFG.pickup.share`, 0.4 at the end of the ramp). `spread` fires 3
   bolts fanned by `CFG.spread.vy`; `rocket` fires slower, bigger bolts that pierce ice and comets and one-shot rocks;
-  both are limited by ammo, not time: `CFG.pickup.ammo` trigger pulls each (a spread pull is one round for three
-  bolts), then the weapon returns to `default` (`player.weapon`, `player.ammo`, `Player.spend`). Picking one up again
-  refills it.
+  both are limited by ammo, not time: `CFG.pickup.ammo` trigger pulls each (spread 24, rocket 15) (a spread pull is one round for three
+  bolts), then the weapon returns to `default` (`player.weapon`, `player.ammo`, `Player.spend`). Picking up the weapon you already hold
+  adds a full pickup's rounds to what is left; a different one replaces it.
 - **Overheat** (the default gun only, `CFG.heat`): each shot adds `perShot` heat, which cools at `cool` per second all
   the time. At full heat the gun jams (`player.overheated`, event `overheat`) and fires again only once the heat is
   down to `resumeAt`. Holding fire takes about 2.7 s to jam and the jam lasts about 1.9 s. Pickup weapons add no heat.
@@ -153,7 +153,7 @@ error card. Rows are in `HUD_ROW`. HUD helpers that run inside a world pass go t
 
 ## Tests
 
-- **Unit** (`node --test game/test/*.test.mjs`, 68 tests): `game/test/load.mjs` loads `vendor/core.js` plus the named
+- **Unit** (`node --test game/test/*.test.mjs`, 69 tests): `game/test/load.mjs` loads `vendor/core.js` plus the named
   game files into one vm context, the way the page joins them. `$(expression)` reads a value out; `plain(value)` copies
   it into the test's realm, because `assert.deepStrictEqual` compares prototypes and the context has its own
   `Object`. Pass `globals` to stub things like `localStorage` or `console`.

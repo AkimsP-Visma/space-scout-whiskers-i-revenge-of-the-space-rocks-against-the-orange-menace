@@ -154,8 +154,9 @@ const Play = {
     if (role === 'shield') {
       s.player.shields = Math.min(CFG.scout.shields, s.player.shields + 1);
     } else {
-      s.player.weapon = role;
-      s.player.ammo = CFG.pickup.ammo[role];
+      const p = s.player;
+      p.ammo = (p.weapon === role ? p.ammo : 0) + CFG.pickup.ammo[role];   // the same weapon again adds to what is left
+      p.weapon = role;
     }
     s.happyUntil = s.t + CFG.mood.happy;
     s.events.push('pickup');

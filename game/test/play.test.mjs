@@ -104,6 +104,12 @@ test('collecting a spread pickup arms the spread weapon and it runs out of ammo'
   run(s, { x: 0, y: 0, fire: true });
   assert.equal(s.player.weapon, 'default'); assert.equal(s.player.ammo, 0);
 });
+test('picking up the weapon you hold adds its ammo; a different one replaces it', () => {
+  const s = quiet(), pick = (role) => { s.objects.push({ kind: 'pickup', role, x: s.player.x, y: s.player.y, r: CFG.pickup.r, vx: 0, vy: 0, angle: 0, spin: 0 }); run(s); };
+  pick('rocket'); assert.equal(s.player.ammo, 15);
+  s.player.ammo = 4; pick('rocket'); assert.equal(s.player.ammo, 4 + 15);
+  pick('spread'); assert.equal(s.player.weapon, 'spread'); assert.equal(s.player.ammo, CFG.pickup.ammo.spread);
+});
 test('a pickup weapon does not run out with time, only with shots', () => {
   const s = quiet();
   s.objects.push({ kind: 'pickup', role: 'rocket', x: s.player.x, y: s.player.y, r: CFG.pickup.r, vx: 0, vy: 0, angle: 0, spin: 0 });
